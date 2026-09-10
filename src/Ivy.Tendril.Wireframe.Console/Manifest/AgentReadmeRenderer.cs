@@ -164,6 +164,11 @@ public sealed class AgentReadmeRenderer(ComponentManifest manifest, VendorManife
         sb.AppendLine("<Card width=\"20rem\" />                // components take sizes directly");
         sb.AppendLine("```");
         sb.AppendLine();
+        sb.AppendLine("If a project genuinely needs arbitrary values, it can be set up with " +
+                      "`wireframe setup <path> --tailwind jit`, which downloads the real Tailwind CLI " +
+                      "(~107 MB, once) and generates whatever the source asks for. Assume that is NOT " +
+                      "on unless you see a `wireframe.json` saying so.");
+        sb.AppendLine();
         sb.AppendLine("Theme colours are available as `bg-`/`text-`/`border-` utilities: `ink`, `ink-muted`, " +
                       "`ink-faint`, `paper`, `paper-raised`, `paper-sunken`, `highlight`, `accent`, `success`, " +
                       "`warning`, `destructive`, `info`. Prefer these over raw Tailwind palette colours so the " +

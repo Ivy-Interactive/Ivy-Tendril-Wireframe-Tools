@@ -48,11 +48,32 @@ public sealed class ServeCommand : AsyncCommand<ServeSettings>
         var esbuild = await new EsbuildProvisioner().ResolveAsync(cancellation);
         var vendor = VendorManifest.Load(assets);
         var outDir = project.OutDir("serve");
-        var linter = new UtilityClassLinter(CssSelectorIndex.FromAssets(assets));
+        var linter = WireframeConfig.Load(project).Tailwind == TailwindMode.Jit
+            ? null
+            : new UtilityClassLinter(CssSelectorIndex.FromAssets(assets));
+
+        // JIT mode replaces the embedded utility sheet with one Tailwind generates from
+        // this project's own source, watched alongside the bundle.
+        var config = WireframeConfig.Load(project);
+        IAsyncDisposable? tailwind = null;
+        string? utilityCss = null;
+
+        if (config.Tailwind == TailwindMode.Jit)
+        {
+            var binary = await TailwindSupport.ProvisionAsync(settings.Quiet, cancellation);
+            if (binary is null) return 1;
+
+            var compiler = new TailwindCompiler(binary, assets, project);
+            tailwind = await compiler.StartWatchAsync(cancellation);
+            utilityCss = TailwindCompiler.OutputPath(project);
+        }
 
         await using var watcher = new EsbuildWatcher(esbuild, project, vendor);
         await using var server = new WireframeServer(assets,
-            new ServerOptions(project, outDir, LiveReload: true, settings.Port));
+            new ServerOptions(project, outDir, LiveReload: true, settings.Port)
+            {
+                UtilityCssPath = utilityCss,
+            });
 
         var quiet = settings.Quiet || settings.PrintUrl;
 
@@ -72,8 +93,9 @@ public sealed class ServeCommand : AsyncCommand<ServeSettings>
                     AnsiConsole.MarkupLine($"  [green]rebuilt[/] [grey]{DateTime.Now:HH:mm:ss}[/]");
 
                 // A class with no rule behind it is invisible in the browser and in the
-                // build output, so it has to be called out explicitly.
-                if (!quiet) ReportClassWarnings(linter.Lint(project));
+                // build output, so it has to be called out explicitly. Skipped under JIT,
+                // where Tailwind generates whatever the source asks for.
+                if (!quiet && linter is not null) ReportClassWarnings(linter.Lint(project));
             }
             else
             {
@@ -131,6 +153,8 @@ public sealed class ServeCommand : AsyncCommand<ServeSettings>
         {
             // Ctrl+C. Disposal below stops esbuild and the server.
         }
+
+        if (tailwind is not null) await tailwind.DisposeAsync();
 
         if (!quiet)
         {

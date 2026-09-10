@@ -121,6 +121,18 @@ ahead of time. Use an inline style or a component's own size prop instead:
 <Card width="20rem" />
 ```
 
+Classes that produce no CSS are reported by `serve` and `screenshot` rather than failing
+silently, with the nearest available step:
+
+```
+! src/App.tsx:24 — `mt-13` produces no CSS. Nearest available: mt-12, mt-14, mt-11.
+```
+
+If you do need the full surface, `wireframe setup <path> --tailwind jit` downloads the
+official Tailwind standalone CLI (~107 MB, cached once) and generates the sheet from your
+source instead. The mode is recorded in `wireframe.json`, so `serve` and `screenshot` pick
+it up automatically.
+
 ## Development
 
 ```bash

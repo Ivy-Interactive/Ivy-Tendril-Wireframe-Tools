@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using Ivy.Tendril.Wireframe.Console.Assets;
+using Ivy.Tendril.Wireframe.Console.Build;
 using Ivy.Tendril.Wireframe.Console.Project;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -17,10 +18,18 @@ public sealed class SetupSettings : ProjectSettings
     public bool Force { get; init; }
 }
 
-public sealed class SetupCommand : Command<SetupSettings>
+public sealed class SetupCommand : AsyncCommand<SetupSettings>
 {
-    protected override int Execute(CommandContext context, SetupSettings settings, CancellationToken cancellation)
+    protected override async Task<int> ExecuteAsync(
+        CommandContext context, SetupSettings settings, CancellationToken cancellation)
     {
+        if (!WireframeConfig.TryParseTailwind(settings.Tailwind, out var tailwind))
+        {
+            AnsiConsole.MarkupLine(
+                $"[red]Unknown --tailwind mode[/] '{settings.Tailwind.EscapeMarkup()}'. Use 'superset' or 'jit'.");
+            return 1;
+        }
+
         var assets = AssetCatalog.Default;
         var project = WireframeProject.At(settings.Path);
 
@@ -39,6 +48,17 @@ public sealed class SetupCommand : Command<SetupSettings>
         var result = scaffolder.Scaffold(project);
         var manifest = VendorManifest.Load(assets);
 
+        new WireframeConfig { Tailwind = tailwind }.Save(project);
+
+        // Pull the binary down now rather than at the first `serve`, so the cost lands on
+        // the command the user explicitly opted into it with.
+        if (tailwind == TailwindMode.Jit
+            && await TailwindSupport.ProvisionAsync(settings.Quiet, cancellation) is null)
+        {
+            return 1;
+        }
+
+
         if (settings.Quiet) return 0;
 
         AnsiConsole.WriteLine();
@@ -55,10 +75,8 @@ public sealed class SetupCommand : Command<SetupSettings>
         AnsiConsole.MarkupLine(
             $"  [grey]tendril-wireframes {manifest.TendrilVersion}  ·  react {manifest.ReactVersion}  ·  no node required[/]");
 
-        if (!string.Equals(settings.Tailwind, "superset", StringComparison.OrdinalIgnoreCase))
-        {
-            AnsiConsole.MarkupLine("  [yellow]![/] [grey]--tailwind jit is not wired up yet; using the embedded superset.[/]");
-        }
+        if (tailwind == TailwindMode.Jit)
+            AnsiConsole.MarkupLine("  [grey]tailwind: standalone CLI (full fidelity, incl. arbitrary values)[/]");
 
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine("  next:");

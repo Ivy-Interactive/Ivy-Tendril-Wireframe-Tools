@@ -19,7 +19,14 @@ public sealed record ServerOptions(
     WireframeProject Project,
     string OutDir,
     bool LiveReload,
-    int Port = 0);
+    int Port = 0)
+{
+    /// <summary>
+    /// When set, this file is served as wireframe-utilities.css instead of the embedded
+    /// superset. Used by --tailwind jit, where the Tailwind CLI generates the sheet.
+    /// </summary>
+    public string? UtilityCssPath { get; init; }
+}
 
 /// <summary>
 /// The dev server. Binds a free loopback port, serves the embedded payload plus the
@@ -134,6 +141,18 @@ public sealed class WireframeServer(AssetCatalog assets, ServerOptions options) 
             app.MapGet($"/__wireframe/{captured}/{{**path}}", async ctx =>
             {
                 var rel = (string?)ctx.Request.RouteValues["path"] ?? "";
+
+                // In JIT mode the utility sheet comes from the Tailwind CLI, not the payload.
+                if (captured == "css"
+                    && rel == "wireframe-utilities.css"
+                    && options.UtilityCssPath is { } generated
+                    && File.Exists(generated))
+                {
+                    ctx.Response.ContentType = "text/css; charset=utf-8";
+                    await ctx.Response.SendFileAsync(generated);
+                    return;
+                }
+
                 var key = $"{captured}/{rel}";
                 if (!assets.TryRead(key, out var bytes))
                 {

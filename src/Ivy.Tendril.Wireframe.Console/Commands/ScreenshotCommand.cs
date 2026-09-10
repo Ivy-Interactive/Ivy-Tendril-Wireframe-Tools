@@ -109,20 +109,41 @@ public sealed class ScreenshotCommand : AsyncCommand<ScreenshotSettings>
                     return 1;
                 }
 
-                server = new WireframeServer(assets, new ServerOptions(project, outDir, LiveReload: false));
-                await server.StartAsync(cancellation);
-                url = server.Url;
+                var config = WireframeConfig.Load(project);
+                string? utilityCss = null;
 
-                // Worth surfacing here too: a screenshot of a page whose layout classes
-                // did nothing looks like a design mistake rather than a missing rule.
-                if (!settings.Quiet)
+                if (config.Tailwind == TailwindMode.Jit)
                 {
+                    var binary = await TailwindSupport.ProvisionAsync(settings.Quiet, cancellation);
+                    if (binary is null) return 1;
+
+                    var css = await new TailwindCompiler(binary, assets, project)
+                        .CompileOnceAsync(cancellation);
+
+                    if (!css.Success)
+                    {
+                        AnsiConsole.MarkupLine("[red]Tailwind failed[/]");
+                        System.Console.Error.WriteLine(css.Output);
+                        return 1;
+                    }
+                    utilityCss = TailwindCompiler.OutputPath(project);
+                }
+                else if (!settings.Quiet)
+                {
+                    // Worth surfacing here too: a screenshot of a page whose layout classes
+                    // did nothing looks like a design mistake rather than a missing rule.
+                    // Under JIT there is nothing to warn about.
                     var warnings = new UtilityClassLinter(CssSelectorIndex.FromAssets(assets)).Lint(project);
                     foreach (var warning in warnings.Take(8))
                         AnsiConsole.MarkupLine($"  [yellow]![/] [grey]{warning.Message.EscapeMarkup()}[/]");
                     if (warnings.Count > 8)
                         AnsiConsole.MarkupLine($"  [yellow]![/] [grey]...and {warnings.Count - 8} more[/]");
                 }
+
+                server = new WireframeServer(assets,
+                    new ServerOptions(project, outDir, LiveReload: false) { UtilityCssPath = utilityCss });
+                await server.StartAsync(cancellation);
+                url = server.Url;
             }
 
             var output = OutputPath(project, settings);
