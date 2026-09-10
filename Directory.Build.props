@@ -1,0 +1,36 @@
+<Project>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <Deterministic>true</Deterministic>
+    <Company>Ivy</Company>
+    <Product>Ivy.Tendril.Wireframe</Product>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+  <!-- Shared NuGet package metadata (applied to packable projects). -->
+  <PropertyGroup>
+    <Authors>Ivy Interactive</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/Ivy-Interactive/Ivy-Tendril-Wireframe-Tools</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Ivy-Interactive/Ivy-Tendril-Wireframe-Tools</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageTags>wireframe;mockup;react;tailwind;tendril;agent;llm;screenshot</PackageTags>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+  </PropertyGroup>
+
+  <!-- Where the node build/ pipeline writes everything the tool embeds. -->
+  <PropertyGroup>
+    <WireframeArtifactsDir>$(MSBuildThisFileDirectory)artifacts\</WireframeArtifactsDir>
+  </PropertyGroup>
+
+</Project>

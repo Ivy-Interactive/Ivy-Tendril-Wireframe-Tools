@@ -1,0 +1,77 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # artifacts/ is committed, so CI needs no node -- except for the esbuild binaries,
+      # which are too large to keep in git history. Restore just those.
+      - name: Fetch esbuild binaries
+        run: |
+          cd build/vendor
+          npm install --no-audit --no-fund
+          node fetch-esbuild.mjs
+
+      - run: dotnet restore Ivy.Tendril.Wireframe.slnx
+      - run: dotnet build Ivy.Tendril.Wireframe.slnx -c Release --no-restore
+      - run: dotnet test Ivy.Tendril.Wireframe.slnx -c Release --no-build
+
+      # Proves the committed artifacts still match the pinned package versions. This is
+      # what stops artifacts/ silently drifting away from what build-all.mjs would produce.
+      - name: Verify committed artifacts are reproducible
+        run: |
+          cd build/vendor
+          node build-all.mjs
+          cd ../..
+          git diff --exit-code --stat -- artifacts/ \
+            || (echo "::error::artifacts/ is stale. Run: cd build/vendor && node build-all.mjs" && exit 1)
+
+  end-to-end:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Fetch esbuild binaries
+        run: |
+          cd build/vendor
+          npm install --no-audit --no-fund
+          node fetch-esbuild.mjs
+
+      - run: dotnet build src/Ivy.Tendril.Wireframe.Console -c Release
+
+      # The headline claim is "works with no node and no network". Exercise the real
+      # commands against the real browser rather than trusting unit tests for it.
+      - name: setup, build and screenshot
+        run: |
+          BIN=src/Ivy.Tendril.Wireframe.Console/bin/Release/net10.0/wireframe
+          "$BIN" setup /tmp/ci-wireframe
+          "$BIN" screenshot /tmp/ci-wireframe --repeat 2
+          test -f /tmp/ci-wireframe/screenshots/1440x900.png
+
+          # A page that rendered nothing still writes a valid PNG, so assert the file is
+          # big enough to plausibly contain drawn content.
+          size=$(stat -c%s /tmp/ci-wireframe/screenshots/1440x900.png)
+          echo "screenshot is $size bytes"
+          test "$size" -gt 20000
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ci-screenshot
+          path: /tmp/ci-wireframe/screenshots/

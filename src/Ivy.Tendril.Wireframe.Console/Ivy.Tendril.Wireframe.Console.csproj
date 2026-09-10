@@ -1,0 +1,87 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Ivy.Tendril.Wireframe.Console</RootNamespace>
+    <AssemblyName>wireframe</AssemblyName>
+
+    <!-- Distributed as a .NET global tool: `dotnet tool install Ivy.Tendril.Wireframe.Console`. -->
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>wireframe</ToolCommandName>
+    <PackageId>Ivy.Tendril.Wireframe.Console</PackageId>
+    <Description>Build React wireframe mockups with the Tendril hand-drawn component library. Scaffolds, serves with hot reload and screenshots them -- with no node or npm installed.</Description>
+    <IsPackable>true</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- FrameworkReference rather than the Web SDK: we want Kestrel and minimal APIs, but
+         not the Web SDK's static-web-assets / wwwroot machinery, which fights a tool whose
+         whole job is serving an arbitrary directory chosen at runtime. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Spectre.Console" />
+    <PackageReference Include="Spectre.Console.Cli" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" Visible="false" />
+  </ItemGroup>
+
+  <!-- ==================================================================================
+       Embedded payload.
+       Everything under artifacts/ except the esbuild binaries is zipped into a single
+       embedded resource. One zip rather than ~130 separate EmbeddedResource entries keeps
+       the assembly small and the asset lookup simple; AssetCatalog reads it from memory.
+
+       Note we deliberately do NOT pre-compress for the wire: this server only ever binds
+       loopback, where transfer compression buys nothing.
+       ================================================================================== -->
+  <Target Name="StageWireframeAssets" BeforeTargets="BeforeBuild" Condition="Exists('$(WireframeArtifactsDir)')">
+    <!-- These are set inside the target, not at project scope: IntermediateOutputPath is
+         defined by the SDK's .targets, which import after this file's property groups are
+         evaluated, so a project-level PropertyGroup would resolve it to an empty string
+         and drop the zip in the project root. -->
+    <PropertyGroup>
+      <WireframeAssetStage>$(IntermediateOutputPath)wireframe-assets\</WireframeAssetStage>
+      <WireframeAssetZip>$(IntermediateOutputPath)wireframe-assets.zip</WireframeAssetZip>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <WireframeAsset Include="$(WireframeArtifactsDir)**\*" Exclude="$(WireframeArtifactsDir)esbuild\**\*" />
+    </ItemGroup>
+
+    <Error Condition="'@(WireframeAsset)' == ''"
+           Text="No files under $(WireframeArtifactsDir). Run: cd build/vendor &amp;&amp; npm install &amp;&amp; node build-all.mjs" />
+
+    <RemoveDir Directories="$(WireframeAssetStage)" />
+    <Copy SourceFiles="@(WireframeAsset)"
+          DestinationFiles="@(WireframeAsset->'$(WireframeAssetStage)%(RecursiveDir)%(Filename)%(Extension)')" />
+    <ZipDirectory SourceDirectory="$(WireframeAssetStage)" DestinationFile="$(WireframeAssetZip)" Overwrite="true" />
+  </Target>
+
+  <Target Name="AddWireframeAssets" BeforeTargets="PrepareForBuild" DependsOnTargets="StageWireframeAssets">
+    <ItemGroup>
+      <EmbeddedResource Include="$(WireframeAssetZip)" LogicalName="wireframe-assets.zip" />
+    </ItemGroup>
+  </Target>
+
+  <!-- ==================================================================================
+       esbuild binary.
+       Copied next to the assembly rather than embedded: it has to be on disk to execute,
+       so embedding would only mean shipping 11 MB twice and extracting on first run.
+       EsbuildProvisioner falls back to a global cache and then an npm-registry download
+       when this is absent (e.g. a portable build, or an unlisted RID).
+       ================================================================================== -->
+  <PropertyGroup>
+    <WireframeEsbuildRid Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</WireframeEsbuildRid>
+    <WireframeEsbuildRid Condition="'$(WireframeEsbuildRid)' == ''">$(NETCoreSdkRuntimeIdentifier)</WireframeEsbuildRid>
+    <WireframeEsbuildDir>$(WireframeArtifactsDir)esbuild\$(WireframeEsbuildRid)\</WireframeEsbuildDir>
+  </PropertyGroup>
+
+  <ItemGroup Condition="Exists('$(WireframeEsbuildDir)')">
+    <None Include="$(WireframeEsbuildDir)*" Pack="true" PackagePath="tools\$(TargetFramework)\any\esbuild\" Visible="false">
+      <Link>esbuild\%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

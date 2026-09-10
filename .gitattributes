@@ -1,0 +1,17 @@
+# LF everywhere. This is not just style: artifacts/ARTIFACTS.lock.json records a SHA-256
+# per artifact and CI re-runs the build to verify them. If git rewrote line endings on
+# checkout, every text artifact would hash differently and the check would fail on
+# Windows for reasons that look nothing like the cause.
+* text=auto eol=lf
+
+# Never touch these.
+*.png binary
+*.woff2 binary
+*.ico binary
+*.exe binary
+
+# Generated; keep them out of diffs and language stats.
+artifacts/** linguist-generated=true
+build/vendor/package-lock.json linguist-generated=true
+build/vendor/tailwind/input.css linguist-generated=true
+build/vendor/tailwind/safelist.txt linguist-generated=true
