@@ -3,7 +3,7 @@
   "versions": {
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "tendril-wireframes": "0.1.0",
+    "tendril-wireframes": "0.1.1",
     "lucide-react": "0.475.0",
     "esbuild": "0.28.2"
   },

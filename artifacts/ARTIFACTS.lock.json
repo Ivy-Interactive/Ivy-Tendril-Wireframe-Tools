@@ -3,16 +3,16 @@
   "inputs": {
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "tendril-wireframes": "0.1.0",
+    "tendril-wireframes": "0.1.1",
     "lucide-react": "0.475.0",
     "esbuild": "0.28.2",
     "tailwindcss": "4.3.3"
   },
   "fileCount": 129,
-  "totalBytes": 82410135,
+  "totalBytes": 82410537,
   "files": {
     "css/fonts.css": "b3fe6f4c0f64fdae3e367e571b9b00c73ee636ad7de29afb5bb3e35c92f4faf9",
-    "css/tendril.css": "c3025459c9587bbcb3f80de8e7fd9b8ae65815f7ff0f64a7286e3b98290a7692",
+    "css/tendril.css": "e9894d5a47ae5f2e19b1b4437ab1e098f6357fd3a2cd09dcb55281ea1ec2cfb3",
     "css/theme.css": "c128cd3ebb7a5d1429bbe356d452c6e3106381c7e03a475d6fcdae8610078208",
     "css/wireframe-utilities.css": "8361f07b3189a7ee67f0afdba0a13019c511968fe79000b486439b0f1080c4cb",
     "esbuild/linux-arm64/esbuild": "90bd269553d258e80b19e3ccab4f98f0831f87442a2f056510ce24fd1b425fc2",
@@ -32,8 +32,8 @@
     "fonts/BalsamiqSans-RegularItalic-latin.woff2": "6e0a1cf1c3b31aa40da4886b6c9fa8361a77591691d601ba8d50d0a50f92f416",
     "fonts/OFL.txt": "0e82859672e549fd39554e2bfa97b5511e81f4f89394f2e696666d36b5d52144",
     "studio/app.css": "4f881ebaeedd693cd04eeaed97c68343030e211a24245f38c9499aa7cf12c9dc",
-    "studio/app.js": "e2b3fb039df6fdf7385dba7afa8bb38f10404a515a40a230b50737acda7aa24e",
-    "tendril.manifest.json": "a476f9281b026c1b6ca51815b2a7bb433f717d395f92a207d3a980d7db448695",
+    "studio/app.js": "7d30b39f3c8ff19daa35e9f5e7f6ae0f4ce2d3466c6e6e7d1b4f7bccfda4ca0a",
+    "tendril.manifest.json": "06c3315bde733f7d4dbb1e6d2dece53d3221fa8d1847a46247ea2f745537173e",
     "types/csstype/index.d.ts": "ac51dd7d31333793807a6abaa5ae168512b6131bd41d9c5b98477fc3b7800f9f",
     "types/csstype/package.json": "c818b74a9bc1556488b7ec2a65399224738f6619228f9a6491c5c02ca91f849e",
     "types/lucide-react/index.d.ts": "baa466ee373210483a1da21a6cc06712d9851d1c70e91a05df6bb1d6b0cbc2b6",
@@ -138,7 +138,7 @@
     "vendor/react-dom__client.js": "c91ab7efe9342f45081336c602f07c76deacf35191465be574b611d3c893c5c2",
     "vendor/react-dom.js": "6d97f6b781205e4cefe7baa80cff9fdfd202787ff1d4ba59dbe181a3a1215511",
     "vendor/react.js": "b9c89c4371837868381447ae4f4aafb8ed7c9834117898aa0ce29c5a20741f7a",
-    "vendor/tendril-wireframes.js": "9c88d47168f5a16519c90652b1aa4d8b3ee06b07f6f16e18607d2b9904f3ec5a",
-    "vendor.manifest.json": "afdf8c50d896a205df5677b5663d00533a807ee12327a34582cb873d5e2a4952"
+    "vendor/tendril-wireframes.js": "30bcd78bffebbc6f756b5d3889d809721541182293e8cae756bfe05b27f845d0",
+    "vendor.manifest.json": "068f8b8946b493812999d229bd6a592a5fa5486925ec72697e2a69fba0dfb7fb"
   }
 }
