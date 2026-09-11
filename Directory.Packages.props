@@ -8,6 +8,9 @@
   <ItemGroup>
     <PackageVersion Include="Spectre.Console" Version="0.55.0" />
     <PackageVersion Include="Spectre.Console.Cli" Version="0.55.0" />
+    <!-- Pseudo-terminal for the Studio's agent panel: Microsoft's ConPTY binding on
+         Windows, native shims elsewhere. Same library the Ivy framework uses. -->
+    <PackageVersion Include="Porta.Pty" Version="2.2.2" />
   </ItemGroup>
 
   <!-- Tests -->

@@ -2,7 +2,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Ivy.Tendril.Wireframe.Console.Assets;
-using Ivy.Tendril.Wireframe.Studio.Agent;
+using Ivy.Tendril.Wireframe.Studio.Terminal;
 using Ivy.Tendril.Wireframe.Studio.Hosting;
 using Ivy.Tendril.Wireframe.Studio.Projects;
 using Spectre.Console;
@@ -64,11 +64,16 @@ public sealed class StudioCommand : AsyncCommand<StudioSettings>
                 _ => $"  [grey]found      {projects.Count} projects[/]",
             });
 
-            if (!AgentSession.IsAvailable)
+            if (PtySession.FindClaude() is null)
             {
                 AnsiConsole.MarkupLine(
-                    "  [yellow]![/] [grey]the `claude` CLI is not on PATH, so the agent panel will be " +
-                    "inert. Everything else works.[/]");
+                    "  [yellow]![/] [grey]the `claude` CLI is not on PATH, so the terminal panel will be " +
+                    "empty. Everything else works.[/]");
+            }
+            else if (!PtySession.IsSupported)
+            {
+                AnsiConsole.MarkupLine(
+                    $"  [yellow]![/] [grey]{PtySession.UnsupportedReason?.EscapeMarkup()}[/]");
             }
 
             AnsiConsole.MarkupLine("  [grey]ctrl+c to stop[/]");

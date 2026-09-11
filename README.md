@@ -120,10 +120,12 @@ wireframe-studio ./wireframes
   are refused.
 - **Open in VS Code** opens the current file (code pane) or the whole project folder
   (rail header). Needs the `code` command; set `WIREFRAME_EDITOR` to override.
-- **Agent** runs the Claude CLI in the selected project, streaming its reply and tool calls.
-  It is scoped to editing `src/` and running `wireframe screenshot` — not
-  `--dangerously-skip-permissions`. Without the `claude` CLI on `PATH` the panel is inert
-  and everything else still works.
+- **Agent** is a real Claude Code session in xterm.js, not a chat box — slash commands,
+  plan mode, the TUI and permission prompts all behave as they do in a terminal. It runs on
+  a pseudo-terminal (Porta.Pty: Microsoft's ConPTY on Windows, native shims elsewhere),
+  because the CLI checks whether stdout is a TTY and drops to non-interactive mode on a
+  pipe. Without the `claude` CLI on `PATH` the panel explains how to install it and
+  everything else still works.
 
 The UI is a React + Tailwind SPA built at tool-build time by `build/studio/` and embedded in
 the assembly, so Studio needs no node at runtime either.

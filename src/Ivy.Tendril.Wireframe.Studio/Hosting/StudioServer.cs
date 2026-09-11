@@ -7,9 +7,9 @@ using Ivy.Tendril.Wireframe.Console.Assets;
 using Ivy.Tendril.Wireframe.Console.Build;
 using Ivy.Tendril.Wireframe.Console.Project;
 using Ivy.Tendril.Wireframe.Console.Screenshot;
-using Ivy.Tendril.Wireframe.Studio.Agent;
 using Ivy.Tendril.Wireframe.Studio.Preview;
 using Ivy.Tendril.Wireframe.Studio.Projects;
+using Ivy.Tendril.Wireframe.Studio.Terminal;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -37,7 +37,6 @@ public sealed class StudioServer(AssetCatalog assets, ProjectIndex index, int po
     private WebApplication? _app;
     private readonly PreviewSupervisor _preview = new(assets);
     private readonly SseHub _events = new();
-    private readonly ConcurrentDictionary<string, AgentSession> _agents = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<FileSystemWatcher> _watchers = [];
     private string? _wireframeCli;
 
@@ -77,6 +76,10 @@ public sealed class StudioServer(AssetCatalog assets, ProjectIndex index, int po
 
     private void Configure(WebApplication app)
     {
+        // Required for the agent terminal. Without it IsWebSocketRequest is always false
+        // and the upgrade is rejected with a 400 before any handler runs.
+        app.UseWebSockets();
+
         app.Use(async (ctx, next) =>
         {
             ctx.Response.Headers.CacheControl = "no-store";
@@ -187,59 +190,6 @@ public sealed class StudioServer(AssetCatalog assets, ProjectIndex index, int po
             return Results.Json(await _preview.RebuildAsync(ct), Json);
         });
 
-        // ---- agent -------------------------------------------------------------
-        app.MapPost("/api/projects/{name}/chat", async (
-            string name, ChatRequest body, HttpContext ctx, CancellationToken ct) =>
-        {
-            var project = index.Find(name);
-            if (project is null)
-            {
-                ctx.Response.StatusCode = StatusCodes.Status404NotFound;
-                return;
-            }
-
-            var session = _agents.GetOrAdd(project.Root,
-                _ => new AgentSession(project, _wireframeCli ?? "wireframe"));
-
-            // NDJSON, flushed per line, so the browser renders the turn as it streams.
-            ctx.Response.ContentType = "application/x-ndjson; charset=utf-8";
-            ctx.Response.Headers["X-Accel-Buffering"] = "no";
-
-            await foreach (var line in session.RunAsync(body.Message, ct))
-            {
-                await ctx.Response.WriteAsync(line.Json + "\n", ct);
-                await ctx.Response.Body.FlushAsync(ct);
-            }
-
-            // The agent almost certainly touched files and may have taken a screenshot.
-            _events.Broadcast(new { type = "files", project = project.Name });
-            _events.Broadcast(new { type = "shots", project = project.Name });
-        });
-
-        app.MapPost("/api/projects/{name}/chat/stop", (string name) =>
-        {
-            var project = index.Find(name);
-            if (project is null) return Results.NotFound();
-            if (_agents.TryGetValue(project.Root, out var session)) session.Kill();
-            return Results.Ok();
-        });
-
-        app.MapPost("/api/projects/{name}/chat/reset", (string name) =>
-        {
-            var project = index.Find(name);
-            if (project is null) return Results.NotFound();
-
-            // Clearing the transcript in the browser is not enough: the next turn would
-            // still pass --resume with the old session id and the agent would remember
-            // everything. Dropping the id here is what actually starts a new conversation.
-            if (_agents.TryGetValue(project.Root, out var session))
-            {
-                session.Kill();
-                session.Reset();
-            }
-            return Results.Ok();
-        });
-
         app.MapDelete("/api/projects/{name}", async (string name, CancellationToken ct) =>
         {
             var project = index.Find(name);
@@ -248,7 +198,6 @@ public sealed class StudioServer(AssetCatalog assets, ProjectIndex index, int po
             // Release the project first: the esbuild watcher holds handles inside it, and
             // on Windows an open handle makes the move fail.
             if (_preview.CurrentProjectName == project.Name) await _preview.CloseAsync(ct);
-            if (_agents.TryRemove(project.Root, out var session)) session.Kill();
 
             var result = ProjectTrash.Trash(index, project);
             if (!result.Ok) return Results.Problem(result.Error, statusCode: 409);
@@ -285,6 +234,42 @@ public sealed class StudioServer(AssetCatalog assets, ProjectIndex index, int po
             var result = EditorLauncher.Open(target, line ?? 0);
             return result.Ok ? Results.Ok() : Results.Problem(result.Error, statusCode: 409);
         });
+
+        // ---- agent terminal ----------------------------------------------------
+        // A real PTY rather than a chat API. Claude Code checks whether stdout is a TTY;
+        // on a pipe it drops to non-interactive mode, so slash commands, plan mode and the
+        // TUI would all be unavailable -- which is exactly what a terminal is for.
+        app.Map("/api/projects/{name}/pty", async (string name, HttpContext ctx) =>
+        {
+            if (!ctx.WebSockets.IsWebSocketRequest)
+            {
+                ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
+                return;
+            }
+
+            var project = index.Find(name);
+            if (project is null)
+            {
+                ctx.Response.StatusCode = StatusCodes.Status404NotFound;
+                return;
+            }
+
+            using var socket = await ctx.WebSockets.AcceptWebSocketAsync();
+            await new TerminalBridge(project, _wireframeCli ?? "wireframe")
+                .RunAsync(socket, ctx.RequestAborted);
+
+            // The session almost certainly touched files and may have taken screenshots.
+            _events.Broadcast(new { type = "files", project = project.Name });
+            _events.Broadcast(new { type = "shots", project = project.Name });
+        });
+
+        app.MapGet("/api/terminal", () => Results.Json(new
+        {
+            available = PtySession.IsSupported && PtySession.FindClaude() is not null,
+            reason = PtySession.FindClaude() is null
+                ? "The `claude` CLI is not on PATH."
+                : PtySession.UnsupportedReason,
+        }, Json));
 
         // ---- events ------------------------------------------------------------
         app.MapGet("/api/events", async (HttpContext ctx, CancellationToken ct) =>
@@ -435,14 +420,12 @@ public sealed class StudioServer(AssetCatalog assets, ProjectIndex index, int po
     public async ValueTask DisposeAsync()
     {
         foreach (var watcher in _watchers) watcher.Dispose();
-        foreach (var session in _agents.Values) session.Kill();
         await _preview.DisposeAsync();
         _events.Dispose();
         if (_app is not null) await _app.DisposeAsync();
     }
 
     private sealed record CaptureRequest(int Width, int Height);
-    private sealed record ChatRequest(string Message);
 }
 
 /// <summary>Trailing-edge debounce: collapses a burst of filesystem events into one.</summary>

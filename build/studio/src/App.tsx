@@ -9,7 +9,7 @@ import {
   type Shot,
   type SourceFile,
 } from "./api";
-import { ChatPanel } from "./components/ChatPanel";
+import { TerminalPanel } from "./components/TerminalPanel";
 import { CodePanel } from "./components/CodePanel";
 import { PreviewPanel } from "./components/PreviewPanel";
 import { ProjectRail } from "./components/ProjectRail";
@@ -162,7 +162,7 @@ export default function App() {
         <VHandle />
 
         <Panel defaultSize={26} minSize={16} maxSize={44}>
-          <ChatPanel project={selected} />
+          <TerminalPanel project={selected} themeKey={theme.resolved} />
         </Panel>
         <VHandle />
 

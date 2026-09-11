@@ -34,18 +34,6 @@ export interface Shot {
   modified: string;
 }
 
-export type ChatRole = "user" | "assistant" | "tool" | "system" | "error";
-
-export interface ChatEntry {
-  id: string;
-  role: ChatRole;
-  text: string;
-  /** For tool entries: the tool name, e.g. "Edit" or "Bash". */
-  tool?: string;
-  detail?: string;
-  pending?: boolean;
-}
-
 async function json<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init);
   if (!response.ok) {
@@ -126,13 +114,6 @@ export const api = {
       method: "POST",
     }),
 
-  stopChat: (project: string) =>
-    fetch(`/api/projects/${encodeURIComponent(project)}/chat/stop`, { method: "POST" }),
-
-  /** Drops the agent's session, so the next turn starts a genuinely new conversation. */
-  resetChat: (project: string) =>
-    fetch(`/api/projects/${encodeURIComponent(project)}/chat/reset`, { method: "POST" }),
-
   /** Moves a project into <root>/.trash/ -- recoverable, not an unlink. */
   deleteProject: async (project: string) => {
     const response = await fetch(`/api/projects/${encodeURIComponent(project)}`, {
@@ -190,52 +171,4 @@ export function subscribe(onEvent: (event: StudioEvent) => void): () => void {
     clearTimeout(retry);
     source?.close();
   };
-}
-
-/**
- * Posts a chat turn and streams the agent's reply.
- *
- * The backend relays `claude --output-format stream-json` line by line, so this yields
- * one object per protocol event rather than buffering the whole turn.
- */
-export async function* chat(
-  project: string,
-  message: string,
-  signal: AbortSignal
-): AsyncGenerator<Record<string, unknown>> {
-  const response = await fetch(`/api/projects/${encodeURIComponent(project)}/chat`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ message }),
-    signal,
-  });
-
-  if (!response.ok || !response.body) {
-    throw new Error(`chat failed: ${response.status} ${await response.text()}`);
-  }
-
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-
-    // NDJSON: the last element may be a partial line, so keep it in the buffer.
-    const lines = buffer.split("\n");
-    buffer = lines.pop() ?? "";
-
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed) continue;
-      try {
-        yield JSON.parse(trimmed) as Record<string, unknown>;
-      } catch {
-        // Non-JSON output from the CLI (a crash banner, say) is surfaced as text.
-        yield { type: "raw", text: trimmed };
-      }
-    }
-  }
 }

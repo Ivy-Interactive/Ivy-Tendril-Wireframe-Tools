@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* xterm ships its own stylesheet; the terminal will not lay out without it. */
+@import "@xterm/xterm/css/xterm.css";
 
 /* The Studio chrome is a real application UI -- deliberately NOT hand-drawn. The
    wireframes it previews are sketchy; the tool around them should not be, or you lose
@@ -166,5 +168,14 @@
   }
   .cm-editor .cm-content {
     caret-color: var(--color-brand);
+  }
+
+  /* xterm sizes itself from its host, so the host must be the thing with the padding. */
+  .xterm {
+    height: 100%;
+  }
+  .xterm .xterm-viewport {
+    background: transparent !important;
+    scrollbar-width: thin;
   }
 }

@@ -16,6 +16,7 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Spectre.Console" />
     <PackageReference Include="Spectre.Console.Cli" />
+    <PackageReference Include="Porta.Pty" />
   </ItemGroup>
 
   <ItemGroup>
