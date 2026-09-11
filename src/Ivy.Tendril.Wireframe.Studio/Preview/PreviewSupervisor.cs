@@ -172,6 +172,11 @@ public sealed class PreviewSupervisor(AssetCatalog assets) : IAsyncDisposable
     /// The wireframe's own live-reload client handles the in-page refresh, so a successful
     /// rebuild must NOT bump the generation — remounting the iframe here would fight it and
     /// throw away the preview's scroll position on every keystroke.
+    ///
+    /// But that client only refreshes if something tells it to. `serve` broadcasts on the
+    /// same event; without the equivalent here nothing in Studio hot-reloaded at all — an
+    /// agent's edit, or a Ctrl+S in the code pane, rebuilt in milliseconds and then sat
+    /// there invisible until the preview was reloaded by hand.
     /// </summary>
     private void OnBuildCompleted(BuildResult result)
     {
@@ -181,6 +186,19 @@ public sealed class PreviewSupervisor(AssetCatalog assets) : IAsyncDisposable
         Publish(result.Success
             ? new PreviewStatus(PreviewPhase.Running, _server?.Url, _generation, null)
             : new PreviewStatus(PreviewPhase.Failed, _server?.Url, _generation, result.Output));
+
+        // Null during the very first build: the server is created after the watcher, and a
+        // page that has not loaded yet has nothing to refresh.
+        if (_server is not null)
+        {
+            if (result.Success) _server.Hub.Broadcast(new { type = "reload" });
+            else _server.Hub.Broadcast(new
+            {
+                type = "error",
+                text = result.Output,
+                location = result.FirstLocation,
+            });
+        }
 
         Rebuilt?.Invoke(name);
     }
