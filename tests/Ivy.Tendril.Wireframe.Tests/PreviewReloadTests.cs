@@ -33,7 +33,7 @@ public class PreviewReloadTests : IAsyncLifetime
     public async ValueTask DisposeAsync()
     {
         if (_preview is not null) await _preview.DisposeAsync();
-        if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
+        TempRoot.Remove(_root);
     }
 
     [Fact]

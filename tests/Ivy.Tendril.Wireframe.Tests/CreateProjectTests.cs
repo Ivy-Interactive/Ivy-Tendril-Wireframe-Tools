@@ -31,7 +31,7 @@ public class CreateProjectTests : IAsyncLifetime
     {
         _http?.Dispose();
         if (_server is not null) await _server.DisposeAsync();
-        if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
+        TempRoot.Remove(_root);
     }
 
     [Fact]

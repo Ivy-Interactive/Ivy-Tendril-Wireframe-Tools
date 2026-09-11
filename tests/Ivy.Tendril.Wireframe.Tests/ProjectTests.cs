@@ -12,7 +12,7 @@ public class ProjectTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
+        TempRoot.Remove(_root);
         GC.SuppressFinalize(this);
     }
 
