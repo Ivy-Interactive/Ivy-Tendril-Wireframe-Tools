@@ -1,0 +1,111 @@
+@import "tailwindcss";
+
+/* The Studio chrome is a real application UI -- deliberately NOT hand-drawn. The
+   wireframes it previews are sketchy; the tool around them should not be, or you lose
+   the visual distinction between "the mockup" and "the thing showing the mockup". */
+
+@theme {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, monospace;
+
+  /* Neutral slate shell so the paper-coloured wireframe iframe reads as the content. */
+  --color-shell: oklch(0.21 0.01 264);
+  --color-shell-raised: oklch(0.26 0.012 264);
+  --color-shell-sunken: oklch(0.17 0.01 264);
+  --color-edge: oklch(0.32 0.014 264);
+  --color-edge-bright: oklch(0.42 0.016 264);
+
+  --color-body: oklch(0.87 0.008 264);
+  --color-body-muted: oklch(0.65 0.012 264);
+  --color-body-faint: oklch(0.5 0.012 264);
+
+  --color-brand: oklch(0.72 0.15 250);
+  --color-good: oklch(0.72 0.16 152);
+  --color-warn: oklch(0.78 0.15 78);
+  --color-bad: oklch(0.65 0.19 22);
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    background: var(--color-shell);
+    color: var(--color-body);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Thin scrollbars everywhere; the panels are dense and default bars eat real width. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-edge-bright) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: var(--color-edge-bright);
+    border-radius: 9999px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+@layer components {
+  /* react-resizable-panels gives us the handle element; the affordance is ours. */
+  .rp-handle {
+    position: relative;
+    background: var(--color-edge);
+    transition: background 120ms ease;
+  }
+  .rp-handle:hover,
+  .rp-handle[data-resize-handle-active] {
+    background: var(--color-brand);
+  }
+  .rp-handle-v {
+    width: 1px;
+  }
+  .rp-handle-h {
+    height: 1px;
+  }
+  /* Widen the grab target well past the 1px line without moving the layout. */
+  .rp-handle::after {
+    content: "";
+    position: absolute;
+    inset: -3px;
+  }
+
+  .cm-editor {
+    height: 100%;
+    background: transparent;
+  }
+  .cm-editor .cm-scroller {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    line-height: 1.65;
+  }
+  .cm-editor.cm-focused {
+    outline: none;
+  }
+  .cm-editor .cm-gutters {
+    background: transparent;
+    border-right: 1px solid var(--color-edge);
+    color: var(--color-body-faint);
+  }
+  .cm-editor .cm-activeLine,
+  .cm-editor .cm-activeLineGutter {
+    background: color-mix(in oklch, var(--color-shell-raised) 60%, transparent);
+  }
+  .cm-editor .cm-selectionBackground,
+  .cm-editor ::selection {
+    background: color-mix(in oklch, var(--color-brand) 30%, transparent) !important;
+  }
+  .cm-editor .cm-cursor {
+    border-left-color: var(--color-brand);
+  }
+}

@@ -91,6 +91,15 @@ export async function buildAll() {
   const esb = await fetchEsbuild();
   console.log(`  ${esb.report.length} RIDs at esbuild ${esb.version}`);
 
+  step("Studio UI (React + Tailwind)");
+  // Built from build/studio rather than here: it has its own dependency set (CodeMirror,
+  // react-resizable-panels) and bundles React in rather than externalising it.
+  const studio = await import(pathToFileURL(path.resolve(here, "../studio/build.mjs")).href);
+  const studioResult = await studio.build();
+  for (const { f, bytes } of studioResult.sizes) {
+    console.log(`  studio/${f.padEnd(16)} ${(bytes / 1024).toFixed(1)} KB`);
+  }
+
   step("lockfile");
   const lock = writeLock({
     ...vendor.manifest.versions,

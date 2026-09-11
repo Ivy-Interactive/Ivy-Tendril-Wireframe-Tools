@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/Ivy.Tendril.Wireframe.Console/Ivy.Tendril.Wireframe.Console.csproj" />
+    <Project Path="src/Ivy.Tendril.Wireframe.Studio/Ivy.Tendril.Wireframe.Studio.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Ivy.Tendril.Wireframe.Tests/Ivy.Tendril.Wireframe.Tests.csproj" />

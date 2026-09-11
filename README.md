@@ -68,6 +68,42 @@ Prints the complete reference — CLI usage, the library's conventions, and all 
 components with their props — as ~40 KB of markdown. `--component <Name>` prints a full
 prop table for one component; `--list` prints just the names.
 
+## Wireframe Studio
+
+A browser UI over a folder of wireframes: the live app, its source, its screenshots, and an
+agent that edits it.
+
+```bash
+dotnet tool install -g Ivy.Tendril.Wireframe.Studio
+wireframe-studio ./wireframes
+```
+
+```
++- wireframes -+- agent ------+- live app -------------------+
+| wf-pm        | > add a      |                              |
+| wf-checkout  |   sidebar    |   <iframe, scaled to fit>    |
+| wf-mobile    |   ...        |                              |
+|              |              +- code -----+- screenshots ---+
+|              |              | App.tsx    | 1440x900.png    |
++--------------+--------------+------------+-----------------+
+```
+
+- **Live app** is the real `wireframe serve` dev server in an iframe, on its own loopback
+  port, with its own React instance from the vendor bundle. That separation is what makes
+  the preview honest: it is exactly what `screenshot` will capture. Pick a viewport from the
+  dropdown and it scales to fit; the camera button captures at that size.
+- **Code** is a CodeMirror editor over `src/`. Ctrl/Cmd+S saves, esbuild rebuilds in
+  ~10 ms, and the wireframe's own live-reload refreshes the frame. There is deliberately no
+  autosave — a half-typed JSX expression would blank the preview on every keystroke.
+- **Screenshots** is the gallery of `screenshots/*.png`, with a lightbox and download.
+- **Agent** runs the Claude CLI in the selected project, streaming its reply and tool calls.
+  It is scoped to editing `src/` and running `wireframe screenshot` — not
+  `--dangerously-skip-permissions`. Without the `claude` CLI on `PATH` the panel is inert
+  and everything else still works.
+
+The UI is a React + Tailwind SPA built at tool-build time by `build/studio/` and embedded in
+the assembly, so Studio needs no node at runtime either.
+
 ## Driving it with an AI agent
 
 `scripts/agent-wireframe.ps1` runs the whole loop: scaffold, hand Claude the

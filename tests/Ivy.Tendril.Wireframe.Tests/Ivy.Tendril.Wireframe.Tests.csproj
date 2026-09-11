@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Ivy.Tendril.Wireframe.Console\Ivy.Tendril.Wireframe.Console.csproj" />
+    <ProjectReference Include="..\..\src\Ivy.Tendril.Wireframe.Studio\Ivy.Tendril.Wireframe.Studio.csproj" />
   </ItemGroup>
 
 </Project>

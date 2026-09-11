@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Ivy.Tendril.Wireframe.Studio</RootNamespace>
+    <AssemblyName>wireframe-studio</AssemblyName>
+
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>wireframe-studio</ToolCommandName>
+    <PackageId>Ivy.Tendril.Wireframe.Studio</PackageId>
+    <Description>A browser UI for Tendril wireframes: live preview, source editor, screenshot gallery and an agent that edits them.</Description>
+    <IsPackable>true</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Spectre.Console" />
+    <PackageReference Include="Spectre.Console.Cli" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The Console project is the engine: bundling, serving, screenshots and the embedded
+         payload all live there, and Studio drives them rather than reimplementing them.
+         Referencing an Exe project is fine; it is consumed as a library. -->
+    <ProjectReference Include="..\Ivy.Tendril.Wireframe.Console\Ivy.Tendril.Wireframe.Console.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" Visible="false" />
+  </ItemGroup>
+
+  <!-- The Studio UI: a React + Tailwind bundle built by build/studio/build.mjs. Only two
+       files, so they are embedded directly rather than zipped. -->
+  <Target Name="EmbedStudioUi" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <StudioUiDir>$(WireframeArtifactsDir)studio\</StudioUiDir>
+    </PropertyGroup>
+
+    <Error Condition="!Exists('$(StudioUiDir)app.js')"
+           Text="The Studio UI bundle is missing. Run: cd build/studio &amp;&amp; npm install &amp;&amp; node build.mjs" />
+
+    <ItemGroup>
+      <EmbeddedResource Include="$(StudioUiDir)app.js" LogicalName="studio/app.js" />
+      <EmbeddedResource Include="$(StudioUiDir)app.css" LogicalName="studio/app.css" />
+    </ItemGroup>
+  </Target>
+
+</Project>
