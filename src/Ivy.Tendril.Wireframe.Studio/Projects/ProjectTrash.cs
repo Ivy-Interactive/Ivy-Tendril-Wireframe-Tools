@@ -15,7 +15,9 @@ public static class ProjectTrash
 {
     public const string TrashDirectoryName = ".trash";
 
-    public sealed record Result(bool Ok, string? Destination, string? Error);
+    /// <summary><paramref name="Retryable"/> marks the "a handle is still open" case,
+    /// which usually clears on its own; every other failure is a settled no.</summary>
+    public sealed record Result(bool Ok, string? Destination, string? Error, bool Retryable = false);
 
     public static Result Trash(ProjectIndex index, WireframeProject project)
     {
@@ -66,11 +68,36 @@ public static class ProjectTrash
             // was not torn down before the move.
             return new Result(false, null,
                 $"Could not move the project: {e.Message} " +
-                "Something may still have a file open inside it.");
+                "Something may still have a file open inside it.",
+                Retryable: true);
         }
         catch (UnauthorizedAccessException e)
         {
             return new Result(false, null, $"Access denied: {e.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Trashes a project, giving the OS a moment to let go of it first.
+    ///
+    /// Killing the agent's PTY does not release the directory synchronously: Claude Code
+    /// runs node children whose working directory is the project, and on Windows a process
+    /// with its cwd inside a folder blocks the move until it has actually exited. Without
+    /// this, deleting a wireframe that had a live agent fails with "being used by another
+    /// process" -- and trying again a second later works, which is the tell.
+    /// </summary>
+    public static async Task<Result> TrashAsync(
+        ProjectIndex index, WireframeProject project, CancellationToken ct = default)
+    {
+        var delay = TimeSpan.FromMilliseconds(100);
+
+        for (var attempt = 1; ; attempt++)
+        {
+            var result = Trash(index, project);
+            if (result.Ok || !result.Retryable || attempt == 6) return result;
+
+            await Task.Delay(delay, ct);
+            delay *= 2;   // 100, 200, 400, 800, 1600ms -- ~3.1s in total before giving up.
         }
     }
 }

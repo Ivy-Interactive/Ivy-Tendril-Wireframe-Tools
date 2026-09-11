@@ -110,4 +110,57 @@ public class TrashTests : IDisposable
         Assert.True(Directory.Exists(first.Destination!));
         Assert.True(Directory.Exists(second.Destination!));
     }
+
+    /// <summary>
+    /// Deleting a wireframe that had a live agent used to fail outright: killing the PTY
+    /// does not release the directory synchronously, so the move hit "being used by another
+    /// process". A held file handle reproduces that on Windows; releasing it mid-flight is
+    /// what the retry is there to survive.
+    /// </summary>
+    [Fact]
+    public async Task Trashing_waits_for_a_lingering_handle_to_close()
+    {
+        var project = Scaffold("busy");
+        var index = new ProjectIndex(_root);
+
+        var held = new FileStream(
+            Path.Combine(project.SourceDir, "App.tsx"),
+            FileMode.Open, FileAccess.Read, FileShare.Read);
+
+        // Prove the premise before testing the remedy: with the handle held, a single
+        // attempt really does fail, and it fails in the retryable way.
+        var blocked = ProjectTrash.Trash(index, project);
+        Assert.False(blocked.Ok);
+        Assert.True(blocked.Retryable, blocked.Error);
+
+        // Let go shortly after the next attempt would have failed.
+        var release = Task.Run(async () =>
+        {
+            await Task.Delay(300, TestContext.Current.CancellationToken);
+            await held.DisposeAsync();
+        });
+
+        var result = await ProjectTrash.TrashAsync(index, project, TestContext.Current.CancellationToken);
+        await release;
+
+        Assert.True(result.Ok, result.Error);
+        Assert.False(Directory.Exists(project.Root));
+    }
+
+    /// <summary>A refusal is not retried -- waiting three seconds to say "that is not a
+    /// wireframe" would just make the UI feel broken.</summary>
+    [Fact]
+    public async Task A_refusal_comes_back_immediately()
+    {
+        var notAProject = Path.Combine(_root, "plain");
+        Directory.CreateDirectory(notAProject);
+
+        var started = DateTime.UtcNow;
+        var result = await ProjectTrash.TrashAsync(
+            new ProjectIndex(_root), WireframeProject.At(notAProject),
+            TestContext.Current.CancellationToken);
+
+        Assert.False(result.Ok);
+        Assert.True(DateTime.UtcNow - started < TimeSpan.FromSeconds(1));
+    }
 }
