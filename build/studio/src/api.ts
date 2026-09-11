@@ -18,12 +18,22 @@ export interface ProjectSummary {
   path: string;
   fileCount: number;
   screenshotCount: number;
+  suggestionCount: number;
   modified: string;
 }
 
 export interface SourceFile {
   path: string;
   bytes: number;
+}
+
+/** A page the agent wrote into <project>/suggestions/. */
+export interface Suggestion {
+  name: string;
+  /** The document's <title>, falling back to the filename. */
+  title: string;
+  bytes: number;
+  modified: string;
 }
 
 export interface Shot {
@@ -97,6 +107,21 @@ export const api = {
       if (!r.ok) throw new Error(`save failed: ${r.status}`);
     }),
 
+  suggestions: (project: string) =>
+    json<Suggestion[]>(`/api/projects/${encodeURIComponent(project)}/suggestions`),
+
+  suggestionUrl: (project: string, name: string, bust: string | number = "") =>
+    `/api/projects/${encodeURIComponent(project)}/suggestions/${encodeURIComponent(name)}` +
+    (bust === "" ? "" : `?v=${encodeURIComponent(String(bust))}`),
+
+  deleteSuggestion: async (project: string, name: string) => {
+    const response = await fetch(
+      `/api/projects/${encodeURIComponent(project)}/suggestions/${encodeURIComponent(name)}`,
+      { method: "DELETE" }
+    );
+    if (!response.ok) throw new Error(await describeFailure(response));
+  },
+
   shots: (project: string) =>
     json<Shot[]>(`/api/projects/${encodeURIComponent(project)}/shots`),
 
@@ -157,6 +182,7 @@ export type StudioEvent =
   | { type: "preview"; project: string; status: PreviewStatus }
   | { type: "files"; project: string }
   | { type: "shots"; project: string }
+  | { type: "suggestions"; project: string }
   | { type: "build"; project: string; ok: boolean; output: string };
 
 export function subscribe(onEvent: (event: StudioEvent) => void): () => void {

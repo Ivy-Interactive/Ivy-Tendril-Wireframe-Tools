@@ -8,12 +8,14 @@ import {
   type ProjectSummary,
   type Shot,
   type SourceFile,
+  type Suggestion,
 } from "./api";
 import { TerminalPanel } from "./components/TerminalPanel";
 import { CodePanel } from "./components/CodePanel";
 import { PreviewPanel } from "./components/PreviewPanel";
 import { ProjectRail } from "./components/ProjectRail";
 import { ShotsPanel } from "./components/ShotsPanel";
+import { SuggestionsPanel } from "./components/SuggestionsPanel";
 import { HHandle, IconButton, VHandle, cx } from "./components/ui";
 import { useTheme } from "./theme";
 
@@ -21,7 +23,7 @@ import { useTheme } from "./theme";
 const STUDIO_ROOT: string =
   (globalThis as unknown as { __STUDIO_ROOT__?: string }).__STUDIO_ROOT__ ?? "";
 
-type BottomTab = "code" | "shots";
+type BottomTab = "code" | "shots" | "suggestions";
 
 export default function App() {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
@@ -32,6 +34,9 @@ export default function App() {
 
   const [shots, setShots] = useState<Shot[]>([]);
   const [shotsVersion, setShotsVersion] = useState(0);
+
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [suggestionsVersion, setSuggestionsVersion] = useState(0);
 
   const [preview, setPreview] = useState<PreviewStatus | null>(null);
   const [tab, setTab] = useState<BottomTab>("code");
@@ -76,19 +81,30 @@ export default function App() {
     }
   }, []);
 
+  const loadSuggestions = useCallback(async (project: string) => {
+    try {
+      setSuggestions(await api.suggestions(project));
+      setSuggestionsVersion((v) => v + 1);
+    } catch (error) {
+      console.error(error);
+    }
+  }, []);
+
   // Selecting a project loads its detail and points the single preview server at it.
   useEffect(() => {
     if (!selected) {
       setFiles([]);
       setShots([]);
+      setSuggestions([]);
       setPreview(null);
       return;
     }
     void loadFiles(selected);
     void loadShots(selected);
+    void loadSuggestions(selected);
     setPreview({ phase: "building", url: null, generation: 0, message: null });
     api.openPreview(selected).then(setPreview).catch(console.error);
-  }, [selected, loadFiles, loadShots]);
+  }, [selected, loadFiles, loadShots, loadSuggestions]);
 
   // One SSE stream drives every refresh, so nothing polls.
   useEffect(
@@ -108,9 +124,12 @@ export default function App() {
           case "shots":
             if (event.project === current) void loadShots(event.project);
             break;
+          case "suggestions":
+            if (event.project === current) void loadSuggestions(event.project);
+            break;
         }
       }),
-    [loadProjects, loadFiles, loadShots]
+    [loadProjects, loadFiles, loadShots, loadSuggestions]
   );
 
   const selectedProject = projects.find((p) => p.name === selected) ?? null;
@@ -186,6 +205,7 @@ export default function App() {
                     [
                       ["code", "Code", files.length],
                       ["shots", "Screenshots", shots.length],
+                      ["suggestions", "Suggestions", suggestions.length],
                     ] as const
                   ).map(([key, label, count]) => (
                     <button
@@ -217,6 +237,14 @@ export default function App() {
                   </div>
                   <div className={cx("h-full", tab !== "shots" && "hidden")}>
                     <ShotsPanel project={selected} shots={shots} shotsVersion={shotsVersion} />
+                  </div>
+                  <div className={cx("h-full", tab !== "suggestions" && "hidden")}>
+                    <SuggestionsPanel
+                      project={selected}
+                      suggestions={suggestions}
+                      suggestionsVersion={suggestionsVersion}
+                      onChanged={() => selected && void loadSuggestions(selected)}
+                    />
                   </div>
                 </div>
               </div>

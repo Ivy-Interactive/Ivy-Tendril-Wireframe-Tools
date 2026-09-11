@@ -154,6 +154,39 @@ public sealed class StudioServer(AssetCatalog assets, ProjectIndex index, int po
                 return File.Exists(full) ? Results.File(full, "image/png") : Results.NotFound();
             }));
 
+        // ---- suggestions -------------------------------------------------------
+        // The agent writes HTML into <project>/suggestions/ and Studio shows it. No format
+        // to agree on, no command to remember: it already knows how to write a page, and
+        // anything it drops in the folder turns up here within a second.
+        app.MapGet("/api/projects/{name}/suggestions", (string name) =>
+            Resolve(name, project => Results.Json(ProjectIndex.Suggestions(project), Json)));
+
+        app.MapGet("/api/projects/{name}/suggestions/{file}", (string name, string file) =>
+            Resolve(name, project =>
+            {
+                // Written by the agent, so unlike the screenshot names this is genuinely
+                // untrusted input: keep it to a bare .html filename inside suggestions/.
+                if (file.Contains('/') || file.Contains('\\') || file.Contains("..")) return Results.BadRequest();
+                if (!file.EndsWith(".html", StringComparison.OrdinalIgnoreCase)) return Results.BadRequest();
+
+                var full = Path.Combine(project.SuggestionsDir, file);
+                return File.Exists(full) ? Results.File(full, "text/html; charset=utf-8") : Results.NotFound();
+            }));
+
+        app.MapDelete("/api/projects/{name}/suggestions/{file}", (string name, string file) =>
+            Resolve(name, project =>
+            {
+                if (file.Contains('/') || file.Contains('\\') || file.Contains("..")) return Results.BadRequest();
+                if (!file.EndsWith(".html", StringComparison.OrdinalIgnoreCase)) return Results.BadRequest();
+
+                var full = Path.Combine(project.SuggestionsDir, file);
+                if (!File.Exists(full)) return Results.NotFound();
+
+                File.Delete(full);
+                _events.Broadcast(new { type = "suggestions", project = project.Name });
+                return Results.Ok();
+            }));
+
         app.MapPost("/api/projects/{name}/shots", async (string name, CaptureRequest body, CancellationToken ct) =>
         {
             var project = index.Find(name);
@@ -385,8 +418,9 @@ public sealed class StudioServer(AssetCatalog assets, ProjectIndex index, int po
         """;
 
     /// <summary>
-    /// Watches the root for projects appearing or disappearing, and for screenshots landing
-    /// (the agent takes those out of band, so nothing else would tell the UI).
+    /// Watches the root for projects appearing or disappearing, and for screenshots and
+    /// suggestions landing (the agent writes those out of band, so nothing else would tell
+    /// the UI).
     /// </summary>
     private void WatchRoot()
     {
@@ -411,6 +445,14 @@ public sealed class StudioServer(AssetCatalog assets, ProjectIndex index, int po
                 {
                     var project = FindOwningProject(path);
                     if (project is not null) _events.Broadcast(new { type = "shots", project });
+                    return;
+                }
+
+                if (path.Contains($"{Path.DirectorySeparatorChar}suggestions{Path.DirectorySeparatorChar}",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    var project = FindOwningProject(path);
+                    if (project is not null) _events.Broadcast(new { type = "suggestions", project });
                     return;
                 }
 

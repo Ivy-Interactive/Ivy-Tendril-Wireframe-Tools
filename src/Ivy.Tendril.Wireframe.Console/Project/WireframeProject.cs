@@ -35,6 +35,14 @@ public sealed class WireframeProject
     /// <summary>Static assets. Inside src/ because they are part of the app, not config.</summary>
     public string PublicDir => Path.Combine(SourceDir, "public");
     public string ScreenshotsDir => Path.Combine(Root, "screenshots");
+
+    /// <summary>
+    /// Where the agent writes notes back to whoever maintains the library -- a missing
+    /// component, a prop that should exist, something the reference got wrong. Plain HTML
+    /// pages, because the agent already knows how to write one and Studio can show it
+    /// without a format to agree on first.
+    /// </summary>
+    public string SuggestionsDir => Path.Combine(Root, "suggestions");
     public string WorkDir => Path.Combine(Root, ".wireframe");
     public string TypesDir => Path.Combine(WorkDir, "types");
     public string StampFile => Path.Combine(WorkDir, ".stamp");

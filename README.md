@@ -121,6 +121,17 @@ wireframe-studio ./wireframes
   preview on its own; a build error shows the diagnostic overlay instead and leaves the
   last good bundle mounted.
 - **Screenshots** is the gallery of `screenshots/*.png`, with a lightbox and download.
+- **Suggestions** is what the agent thinks would have made the build easier — a component
+  the library is missing, a prop that should exist, or something in `agent-readme` or its
+  session briefing that was wrong, missing or misleading. It writes a self-contained HTML
+  page into `<project>/suggestions/`, the root watcher notices, and it appears in the tab
+  within a second. Each one can be opened full size, copied to the clipboard, saved to
+  disk, or deleted once acted on.
+
+  A folder of HTML rather than a command with a schema: the agent already knows how to
+  write a page, and a format it has to be taught is a format it gets wrong. The pages are
+  rendered in an iframe sandboxed without `allow-same-origin`, so a page the agent wrote
+  cannot reach the Studio origin that can start sessions and delete wireframes.
 - **Delete** is on each row in the rail, behind an inline confirm. It moves the project to
   `<root>/.trash/<name>-<timestamp>/` rather than unlinking it, so a misclick costs one
   `mv` to undo. The scanned root itself, and anything that is not a wireframe project,

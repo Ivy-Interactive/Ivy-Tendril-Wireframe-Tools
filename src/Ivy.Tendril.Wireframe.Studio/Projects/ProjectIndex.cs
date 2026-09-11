@@ -9,11 +9,18 @@ public sealed record ProjectSummary(
     [property: JsonPropertyName("path")] string Path,
     [property: JsonPropertyName("fileCount")] int FileCount,
     [property: JsonPropertyName("screenshotCount")] int ScreenshotCount,
+    [property: JsonPropertyName("suggestionCount")] int SuggestionCount,
     [property: JsonPropertyName("modified")] DateTimeOffset Modified);
 
 public sealed record SourceFileInfo(
     [property: JsonPropertyName("path")] string Path,
     [property: JsonPropertyName("bytes")] long Bytes);
+
+public sealed record SuggestionInfo(
+    [property: JsonPropertyName("name")] string Name,
+    [property: JsonPropertyName("title")] string Title,
+    [property: JsonPropertyName("bytes")] long Bytes,
+    [property: JsonPropertyName("modified")] DateTimeOffset Modified);
 
 public sealed record ShotInfo(
     [property: JsonPropertyName("name")] string Name,
@@ -56,7 +63,8 @@ public sealed class ProjectIndex(string root)
                 .Max();
 
             found.Add(new ProjectSummary(
-                project.Name, project.Root, files.Count, shots.Count, new DateTimeOffset(modified, TimeSpan.Zero)));
+                project.Name, project.Root, files.Count, shots.Count, Suggestions(project).Count,
+                new DateTimeOffset(modified, TimeSpan.Zero)));
         }
 
         return found.OrderByDescending(p => p.Modified).ToList();
@@ -81,7 +89,8 @@ public sealed class ProjectIndex(string root)
         {
             var name = System.IO.Path.GetFileName(child);
             // Skip the directories that are never a wireframe and are expensive to walk.
-            if (name is "node_modules" or "bin" or "obj" or ".git" or ".wireframe" or "screenshots")
+            if (name is "node_modules" or "bin" or "obj" or ".git" or ".wireframe"
+                or "screenshots" or "suggestions")
                 continue;
             if (name.StartsWith('.')) continue;
 
@@ -119,6 +128,55 @@ public sealed class ProjectIndex(string root)
             })
             .OrderByDescending(s => s.Modified)
             .ToList();
+    }
+
+    /// <summary>
+    /// The agent's notes, newest first. Only `.html`: the folder is the agent's to write
+    /// into, and anything else it leaves there is not something Studio can render.
+    /// </summary>
+    public static IReadOnlyList<SuggestionInfo> Suggestions(WireframeProject project)
+    {
+        if (!Directory.Exists(project.SuggestionsDir)) return [];
+
+        return Directory.EnumerateFiles(project.SuggestionsDir, "*.html")
+            .Select(file =>
+            {
+                var info = new FileInfo(file);
+                return new SuggestionInfo(
+                    info.Name, ReadTitle(file, info.Name), info.Length,
+                    new DateTimeOffset(info.LastWriteTimeUtc, TimeSpan.Zero));
+            })
+            .OrderByDescending(s => s.Modified)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Pulls &lt;title&gt; out for the list, falling back to the filename. Only the head of
+    /// the file is read: these are whole pages, and the list must stay cheap enough to
+    /// rebuild on every watcher event.
+    /// </summary>
+    private static string ReadTitle(string file, string fallback)
+    {
+        try
+        {
+            var buffer = new char[4096];
+            using var reader = new StreamReader(file);
+            var read = reader.ReadBlock(buffer, 0, buffer.Length);
+            var head = new string(buffer, 0, read);
+
+            var open = head.IndexOf("<title", StringComparison.OrdinalIgnoreCase);
+            if (open < 0) return fallback;
+            var start = head.IndexOf('>', open);
+            var close = start < 0 ? -1 : head.IndexOf("</title>", start, StringComparison.OrdinalIgnoreCase);
+            if (close < 0) return fallback;
+
+            var title = System.Net.WebUtility.HtmlDecode(head[(start + 1)..close]).Trim();
+            return title.Length == 0 ? fallback : title;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            return fallback;
+        }
     }
 
     /// <summary>
