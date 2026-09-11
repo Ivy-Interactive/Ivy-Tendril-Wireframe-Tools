@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Panel, PanelGroup } from "react-resizable-panels";
-import { PencilRuler } from "lucide-react";
+import { Monitor, Moon, PencilRuler, Sun } from "lucide-react";
 import {
   api,
   subscribe,
@@ -14,7 +14,8 @@ import { CodePanel } from "./components/CodePanel";
 import { PreviewPanel } from "./components/PreviewPanel";
 import { ProjectRail } from "./components/ProjectRail";
 import { ShotsPanel } from "./components/ShotsPanel";
-import { HHandle, VHandle, cx } from "./components/ui";
+import { HHandle, IconButton, VHandle, cx } from "./components/ui";
+import { useTheme } from "./theme";
 
 // The server stamps this into index.html; it is the directory Studio is scanning.
 const STUDIO_ROOT: string =
@@ -34,6 +35,8 @@ export default function App() {
 
   const [preview, setPreview] = useState<PreviewStatus | null>(null);
   const [tab, setTab] = useState<BottomTab>("code");
+
+  const theme = useTheme();
 
   // Read inside event handlers, which would otherwise close over a stale value.
   const selectedRef = useRef<string | null>(null);
@@ -125,6 +128,25 @@ export default function App() {
         <span className="ml-auto truncate font-mono text-[11px] text-body-faint">
           {STUDIO_ROOT}
         </span>
+        <IconButton
+          icon={
+            theme.choice === "system" ? (
+              <Monitor size={14} />
+            ) : theme.choice === "light" ? (
+              <Sun size={14} />
+            ) : (
+              <Moon size={14} />
+            )
+          }
+          label={
+            theme.choice === "system"
+              ? `Theme: following the system (${theme.resolved}) — click for light`
+              : theme.choice === "light"
+                ? "Theme: light — click for dark"
+                : "Theme: dark — click to follow the system"
+          }
+          onClick={theme.cycle}
+        />
       </header>
 
       <PanelGroup direction="horizontal" autoSaveId="studio-h" className="min-h-0 flex-1">

@@ -15,19 +15,24 @@ import { api, type SourceFile } from "../api";
 import { Button, Empty, IconButton, cx, formatBytes } from "./ui";
 
 /** Matches the Studio's own palette rather than importing a stock CodeMirror theme, so the
- *  editor does not look bolted on. */
+ *  editor does not look bolted on.
+ *
+ *  Every colour is a var() rather than a literal. That is what lets the editor follow a
+ *  theme flip: the dark palette's mid-lightness strings and keywords are unreadable on
+ *  white, and CodeMirror builds its stylesheet once at construction -- so hardcoding here
+ *  would mean tearing the editor down and rebuilding it on every toggle. */
 const highlight = HighlightStyle.define([
-  { tag: tags.keyword, color: "oklch(0.75 0.14 300)" },
-  { tag: [tags.name, tags.deleted, tags.character, tags.macroName], color: "oklch(0.87 0.008 264)" },
-  { tag: [tags.propertyName], color: "oklch(0.8 0.1 220)" },
-  { tag: [tags.string, tags.special(tags.string)], color: "oklch(0.8 0.12 145)" },
-  { tag: [tags.number, tags.bool, tags.null], color: "oklch(0.82 0.12 60)" },
-  { tag: [tags.typeName, tags.className, tags.tagName], color: "oklch(0.82 0.11 200)" },
-  { tag: [tags.function(tags.variableName), tags.labelName], color: "oklch(0.84 0.11 250)" },
-  { tag: [tags.comment, tags.blockComment], color: "oklch(0.5 0.012 264)", fontStyle: "italic" },
-  { tag: [tags.operator, tags.punctuation], color: "oklch(0.65 0.012 264)" },
-  { tag: [tags.attributeName], color: "oklch(0.8 0.1 220)" },
-  { tag: [tags.attributeValue], color: "oklch(0.8 0.12 145)" },
+  { tag: tags.keyword, color: "var(--cm-keyword)" },
+  { tag: [tags.name, tags.deleted, tags.character, tags.macroName], color: "var(--cm-name)" },
+  { tag: [tags.propertyName], color: "var(--cm-property)" },
+  { tag: [tags.string, tags.special(tags.string)], color: "var(--cm-string)" },
+  { tag: [tags.number, tags.bool, tags.null], color: "var(--cm-number)" },
+  { tag: [tags.typeName, tags.className, tags.tagName], color: "var(--cm-type)" },
+  { tag: [tags.function(tags.variableName), tags.labelName], color: "var(--cm-function)" },
+  { tag: [tags.comment, tags.blockComment], color: "var(--cm-comment)", fontStyle: "italic" },
+  { tag: [tags.operator, tags.punctuation], color: "var(--cm-punctuation)" },
+  { tag: [tags.attributeName], color: "var(--cm-property)" },
+  { tag: [tags.attributeValue], color: "var(--cm-string)" },
 ]);
 
 const baseExtensions: Extension[] = [

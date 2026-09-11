@@ -322,6 +322,28 @@ public sealed class StudioServer(AssetCatalog assets, ProjectIndex index, int po
         await ctx.Response.Body.WriteAsync(bytes);
     }
 
+    /// <summary>
+    /// Sets data-theme before the stylesheet paints. Without it a light-mode user sees a
+    /// flash of the dark default while the bundle loads.
+    ///
+    /// Kept out of the interpolated index.html literal on purpose: inside a $"""..."""
+    /// raw string, `{` opens an interpolation, so JS braces would have to be doubled and
+    /// the script becomes unreadable.
+    /// </summary>
+    private const string EarlyThemeScript =
+        """
+        <script>
+          try {
+            var choice = localStorage.getItem("wireframe-studio-theme") || "system";
+            var light = choice === "light" ||
+              (choice === "system" && matchMedia("(prefers-color-scheme: light)").matches);
+            document.documentElement.dataset.theme = light ? "light" : "dark";
+          } catch (e) {
+            document.documentElement.dataset.theme = "dark";
+          }
+        </script>
+        """;
+
     private string IndexHtml() =>
         $"""
         <!doctype html>
@@ -332,6 +354,7 @@ public sealed class StudioServer(AssetCatalog assets, ProjectIndex index, int po
             <title>Wireframe Studio</title>
             <link rel="stylesheet" href="/studio/app.css" />
             <script>globalThis.__STUDIO_ROOT__ = {JsonSerializer.Serialize(index.Root)};</script>
+            {EarlyThemeScript}
           </head>
           <body class="h-full">
             <div id="root" class="h-full"></div>
