@@ -38,6 +38,7 @@ public sealed class StudioServer(AssetCatalog assets, ProjectIndex index, int po
     private readonly PreviewSupervisor _preview = new(assets);
     private readonly SseHub _events = new();
     private readonly List<FileSystemWatcher> _watchers = [];
+    private TerminalSessions? _terminals;
     private string? _wireframeCli;
 
     public string Url { get; private set; } = "";
@@ -45,6 +46,7 @@ public sealed class StudioServer(AssetCatalog assets, ProjectIndex index, int po
     public async Task StartAsync(CancellationToken ct = default)
     {
         _wireframeCli = ResolveWireframeCli();
+        _terminals = new TerminalSessions(_wireframeCli);
 
         _preview.StatusChanged += (project, status) =>
             _events.Broadcast(new { type = "preview", project, status });
@@ -98,6 +100,17 @@ public sealed class StudioServer(AssetCatalog assets, ProjectIndex index, int po
 
         // ---- projects ----------------------------------------------------------
         app.MapGet("/api/projects", () => Results.Json(index.List(), Json));
+
+        app.MapPost("/api/projects", (CreateRequest body) =>
+        {
+            var summary = index.Create(body.Name, assets, out var error);
+            if (summary is null) return Results.Problem(error, statusCode: 409);
+
+            // The watcher would pick this up anyway, but broadcasting immediately means the
+            // rail updates before the debounce rather than a third of a second later.
+            _events.Broadcast(new { type = "projects" });
+            return Results.Json(summary, Json);
+        });
 
         app.MapGet("/api/projects/{name}/files", (string name) =>
             Resolve(name, project => Results.Json(ProjectIndex.SourceFiles(project).ToList(), Json)));
@@ -198,8 +211,9 @@ public sealed class StudioServer(AssetCatalog assets, ProjectIndex index, int po
             // Release the project first: the esbuild watcher holds handles inside it, and
             // on Windows an open handle makes the move fail.
             if (_preview.CurrentProjectName == project.Name) await _preview.CloseAsync(ct);
+            await _terminals!.RemoveAsync(project.Root);
 
-            var result = ProjectTrash.Trash(index, project);
+            var result = await ProjectTrash.TrashAsync(index, project, ct);
             if (!result.Ok) return Results.Problem(result.Error, statusCode: 409);
 
             _events.Broadcast(new { type = "projects" });
@@ -255,12 +269,34 @@ public sealed class StudioServer(AssetCatalog assets, ProjectIndex index, int po
             }
 
             using var socket = await ctx.WebSockets.AcceptWebSocketAsync();
-            await new TerminalBridge(project, _wireframeCli ?? "wireframe")
-                .RunAsync(socket, ctx.RequestAborted);
+
+            // The session lives in TerminalSessions, not here: detaching a socket (switching
+            // wireframes, or reloading the page) must not end the agent's conversation.
+            await _terminals!.ServeAsync(project, socket, ctx.RequestAborted);
 
             // The session almost certainly touched files and may have taken screenshots.
             _events.Broadcast(new { type = "files", project = project.Name });
             _events.Broadcast(new { type = "shots", project = project.Name });
+        });
+
+        // Whether this wireframe currently has a live agent. Sessions outlive the socket,
+        // so "is the panel connected" and "is the conversation still there" are different
+        // questions, and only the server can answer the second one.
+        app.MapGet("/api/projects/{name}/terminal", (string name) =>
+        {
+            var project = index.Find(name);
+            return project is null
+                ? Results.NotFound()
+                : Results.Json(new { running = _terminals!.IsRunning(project.Root) }, Json);
+        });
+
+        app.MapPost("/api/projects/{name}/terminal/restart", async (string name) =>
+        {
+            var project = index.Find(name);
+            if (project is null) return Results.NotFound();
+
+            await _terminals!.RemoveAsync(project.Root);
+            return Results.Ok();
         });
 
         app.MapGet("/api/terminal", () => Results.Json(new
@@ -420,12 +456,14 @@ public sealed class StudioServer(AssetCatalog assets, ProjectIndex index, int po
     public async ValueTask DisposeAsync()
     {
         foreach (var watcher in _watchers) watcher.Dispose();
+        if (_terminals is not null) await _terminals.DisposeAsync();
         await _preview.DisposeAsync();
         _events.Dispose();
         if (_app is not null) await _app.DisposeAsync();
     }
 
     private sealed record CaptureRequest(int Width, int Height);
+    private sealed record CreateRequest(string Name);
 }
 
 /// <summary>Trailing-edge debounce: collapses a burst of filesystem events into one.</summary>

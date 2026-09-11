@@ -66,6 +66,17 @@ async function describeFailure(response: Response): Promise<string> {
 export const api = {
   projects: () => json<ProjectSummary[]>("/api/projects"),
 
+  /** Scaffolds a new wireframe under the scanned root. */
+  createProject: async (name: string) => {
+    const response = await fetch("/api/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    if (!response.ok) throw new Error(await describeFailure(response));
+    return (await response.json()) as ProjectSummary;
+  },
+
   files: (project: string) =>
     json<SourceFile[]>(`/api/projects/${encodeURIComponent(project)}/files`),
 
@@ -124,6 +135,10 @@ export const api = {
   },
 
   editorAvailable: () => json<{ available: boolean }>("/api/editor"),
+
+  /** Ends a project's agent session. Detaching a socket does not -- only this does. */
+  restartTerminal: (project: string) =>
+    fetch(`/api/projects/${encodeURIComponent(project)}/terminal/restart`, { method: "POST" }),
 
   /** Opens a file (or the whole project, when path is omitted) in VS Code. */
   openInEditor: async (project: string, path?: string) => {

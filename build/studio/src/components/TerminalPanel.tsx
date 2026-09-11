@@ -3,6 +3,7 @@ import { RotateCcw, TerminalSquare, TriangleAlert } from "lucide-react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
+import { api } from "../api";
 import { Empty, IconButton, Pane } from "./ui";
 
 /**
@@ -42,7 +43,7 @@ export function TerminalPanel({
   const fitRef = useRef<FitAddon | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
 
-  const [status, setStatus] = useState<"idle" | "connecting" | "live" | "ended">("idle");
+  const [status, setStatus] = useState<"idle" | "connecting" | "live" | "detached">("idle");
   const [unavailable, setUnavailable] = useState<string | null>(null);
   // Forces a fresh terminal + socket when the user restarts the session.
   const [generation, setGeneration] = useState(0);
@@ -118,11 +119,12 @@ export function TerminalPanel({
     };
 
     socket.onclose = () => {
-      setStatus("ended");
-      term.write("\r\n\x1b[90m— session ended —\x1b[0m\r\n");
+      // Not "ended": the session keeps running on the server and reattaches on the way
+      // back. Saying otherwise would suggest context had been lost when it has not.
+      setStatus("detached");
     };
 
-    socket.onerror = () => setStatus("ended");
+    socket.onerror = () => setStatus("detached");
 
     // Keystrokes go as binary; control messages as text. Keeping them on different frame
     // types means a user typing JSON can never be mistaken for a resize.
@@ -160,7 +162,17 @@ export function TerminalPanel({
     if (termRef.current) termRef.current.options.theme = readTheme();
   }, [themeKey]);
 
-  const restart = () => setGeneration((n) => n + 1);
+  // Ending the session is explicit. Simply remounting would reconnect to the one already
+  // running on the server, which is the behaviour that keeps context across a switch.
+  const restart = async () => {
+    if (!project) return;
+    try {
+      await api.restartTerminal(project);
+    } catch (error) {
+      console.error(error);
+    }
+    setGeneration((n) => n + 1);
+  };
 
   return (
     <Pane
@@ -172,15 +184,15 @@ export function TerminalPanel({
             ? "claude"
             : status === "connecting"
               ? "starting…"
-              : status === "ended"
-                ? "ended"
+              : status === "detached"
+                ? "detached"
                 : undefined
       }
       actions={
         <IconButton
           icon={<RotateCcw size={14} />}
           label="Restart the session"
-          onClick={restart}
+          onClick={() => void restart()}
           disabled={!project || !!unavailable}
         />
       }

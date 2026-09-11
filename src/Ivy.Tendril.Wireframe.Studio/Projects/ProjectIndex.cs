@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Ivy.Tendril.Wireframe.Console.Assets;
 using Ivy.Tendril.Wireframe.Console.Project;
 
 namespace Ivy.Tendril.Wireframe.Studio.Projects;
@@ -140,6 +141,52 @@ public sealed class ProjectIndex(string root)
             if (parts[1].Equals("full", StringComparison.OrdinalIgnoreCase)) return (width, width * 2);
         }
         return (1440, 900);
+    }
+
+    /// <summary>
+    /// Turns a user-typed name into a directory name, or returns null when it cannot be
+    /// made safe. The name arrives from a browser field, so it must be a single segment
+    /// that stays inside the scanned root.
+    /// </summary>
+    public static string? SanitizeName(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return null;
+
+        var trimmed = name.Trim();
+        if (trimmed is "." or "..") return null;
+        if (trimmed.StartsWith('.')) return null;          // would hide from the rail
+        if (trimmed.Length > 64) return null;
+
+        // No separators: a name is one directory, never a path. GetInvalidFileNameChars
+        // covers both slashes on Windows but not on Unix, so they are checked explicitly.
+        if (trimmed.Contains('/') || trimmed.Contains('\\')) return null;
+        if (trimmed.IndexOfAny(System.IO.Path.GetInvalidFileNameChars()) >= 0) return null;
+
+        return trimmed;
+    }
+
+    /// <summary>Creates a new wireframe project under the scanned root.</summary>
+    public ProjectSummary? Create(string name, AssetCatalog assets, out string? error)
+    {
+        var safe = SanitizeName(name);
+        if (safe is null)
+        {
+            error = "Use a short name without slashes, and not starting with a dot.";
+            return null;
+        }
+
+        var target = System.IO.Path.Combine(Root, safe);
+        if (Directory.Exists(target) && Directory.EnumerateFileSystemEntries(target).Any())
+        {
+            error = $"'{safe}' already exists.";
+            return null;
+        }
+
+        new ProjectScaffolder(assets).Scaffold(WireframeProject.At(target));
+        error = null;
+
+        return List().FirstOrDefault(p =>
+            string.Equals(p.Name, safe, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>Resolves a path inside a project's src/, refusing anything that escapes it.</summary>

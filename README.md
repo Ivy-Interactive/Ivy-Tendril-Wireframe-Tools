@@ -39,6 +39,10 @@ and produces a project an agent can edit immediately.
   .wireframe/          regenerated every run; types for the editor
 ```
 
+`App.tsx` starts empty — an empty page, not a starter wireframe. A demo screen would be
+the first thing to delete and the first thing to get copied by accident; the conventions
+live in `wireframe agent-readme` instead.
+
 Everything the app is made of lives under `src/`, so opening the project shows one folder
 to work in rather than app files scattered beside config. Existing files are never
 overwritten, and a project from an earlier layout has its `index.html` and `public/` moved
@@ -113,6 +117,9 @@ wireframe-studio ./wireframes
 - **Code** is a CodeMirror editor over `src/`. Ctrl/Cmd+S saves, esbuild rebuilds in
   ~10 ms, and the wireframe's own live-reload refreshes the frame. There is deliberately no
   autosave — a half-typed JSX expression would blank the preview on every keystroke.
+  Edits made outside Studio reload the same way, so what the agent writes appears in the
+  preview on its own; a build error shows the diagnostic overlay instead and leaves the
+  last good bundle mounted.
 - **Screenshots** is the gallery of `screenshots/*.png`, with a lightbox and download.
 - **Delete** is on each row in the rail, behind an inline confirm. It moves the project to
   `<root>/.trash/<name>-<timestamp>/` rather than unlinking it, so a misclick costs one
@@ -126,6 +133,17 @@ wireframe-studio ./wireframes
   because the CLI checks whether stdout is a TTY and drops to non-interactive mode on a
   pipe. Without the `claude` CLI on `PATH` the panel explains how to install it and
   everything else still works.
+
+  Each wireframe keeps **its own session, and that session outlives the socket**: switching
+  to another wireframe and back reattaches to the same conversation with its scrollback
+  replayed, rather than starting a new agent that has forgotten everything. Reloading the
+  page does the same. The restart button is the one thing that really ends it. The agent is
+  briefed on startup with an appended system prompt and an `AGENT.md` in the project, so it
+  knows it is authoring a wireframe and to read `wireframe agent-readme` first.
+
+- **New wireframe** is the `+` in the rail: it scaffolds a project under the scanned root
+  and selects it. Projects created outside Studio show up within about a second too — the
+  root is watched.
 
 The UI is a React + Tailwind SPA built at tool-build time by `build/studio/` and embedded in
 the assembly, so Studio needs no node at runtime either.

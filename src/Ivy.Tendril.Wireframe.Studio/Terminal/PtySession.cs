@@ -21,6 +21,9 @@ public sealed class PtySession : IAsyncDisposable
 {
     private readonly IPtyConnection _connection;
 
+    /// <summary>Temp file holding the appended system prompt; removed on disposal.</summary>
+    private string? _promptFile;
+
     private PtySession(IPtyConnection connection)
     {
         _connection = connection;
@@ -45,10 +48,25 @@ public sealed class PtySession : IAsyncDisposable
         int rows,
         CancellationToken ct = default)
     {
+        // Give the agent its brief before it sees a prompt: the component reference on
+        // disk, and a short system prompt pointing at it.
+        AgentBriefing.WriteReference(project);
+
+        var promptFile = Path.Combine(
+            Path.GetTempPath(), $"wireframe-studio-prompt-{Guid.NewGuid():N}.md");
+        await File.WriteAllTextAsync(promptFile, AgentBriefing.SystemPrompt(project), ct);
+
         // On Windows the command line must be passed verbatim -- the CLI is a .cmd shim and
         // Porta's default argument joining would mangle a path containing spaces.
         var verbatim = OperatingSystem.IsWindows();
-        string[] arguments = ["--add-dir", project.Root];
+        string[] arguments =
+        [
+            "--add-dir", project.Root,
+            // A file rather than an inline string: the prompt contains quotes, braces and
+            // newlines, and passing it through a verbatim Windows command line would
+            // mangle it.
+            "--append-system-prompt-file", promptFile,
+        ];
 
         var options = new PtyOptions
         {
@@ -64,7 +82,8 @@ public sealed class PtySession : IAsyncDisposable
             Environment = BuildEnvironment(wireframeCli),
         };
 
-        return new PtySession(await PtyProvider.SpawnAsync(options, ct));
+        var session = new PtySession(await PtyProvider.SpawnAsync(options, ct)) { _promptFile = promptFile };
+        return session;
     }
 
     /// <summary>Quotes an argument for a verbatim Windows command line.</summary>
@@ -150,6 +169,13 @@ public sealed class PtySession : IAsyncDisposable
         }
 
         (_connection as IDisposable)?.Dispose();
+
+        if (_promptFile is not null)
+        {
+            try { File.Delete(_promptFile); } catch { /* best effort */ }
+            _promptFile = null;
+        }
+
         return ValueTask.CompletedTask;
     }
 }
