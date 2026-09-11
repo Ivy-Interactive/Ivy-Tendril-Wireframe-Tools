@@ -434,38 +434,33 @@ public sealed class StudioServer(AssetCatalog assets, ProjectIndex index, int po
                 EnableRaisingEvents = true,
             };
 
-            var debounce = new Debouncer(TimeSpan.FromMilliseconds(350));
+            // One debouncer per (kind, project), not one for the whole watcher. A single
+            // shared one is last-writer-wins, so while the agent was editing src/ -- which
+            // it is always doing -- a suggestion landing was swallowed by the src write
+            // 50ms later and never reached the browser. Independent kinds must not be able
+            // to cancel each other.
+            var debouncers = new ConcurrentDictionary<string, Debouncer>(StringComparer.OrdinalIgnoreCase);
 
-            void OnChange(object _, FileSystemEventArgs e) => debounce.Run(() =>
+            void OnChange(object _, FileSystemEventArgs e)
             {
-                var path = e.FullPath;
+                var (kind, scope) = Classify(e.FullPath);
 
-                if (path.Contains($"{Path.DirectorySeparatorChar}screenshots{Path.DirectorySeparatorChar}",
-                        StringComparison.OrdinalIgnoreCase))
-                {
-                    var project = FindOwningProject(path);
-                    if (project is not null) _events.Broadcast(new { type = "shots", project });
-                    return;
-                }
+                debouncers
+                    .GetOrAdd($"{kind}|{scope}", _ => new Debouncer(TimeSpan.FromMilliseconds(350)))
+                    .Run(() =>
+                    {
+                        if (kind == "projects")
+                        {
+                            _events.Broadcast(new { type = "projects" });
+                            return;
+                        }
 
-                if (path.Contains($"{Path.DirectorySeparatorChar}suggestions{Path.DirectorySeparatorChar}",
-                        StringComparison.OrdinalIgnoreCase))
-                {
-                    var project = FindOwningProject(path);
-                    if (project is not null) _events.Broadcast(new { type = "suggestions", project });
-                    return;
-                }
-
-                if (path.Contains($"{Path.DirectorySeparatorChar}src{Path.DirectorySeparatorChar}",
-                        StringComparison.OrdinalIgnoreCase))
-                {
-                    var project = FindOwningProject(path);
-                    if (project is not null) _events.Broadcast(new { type = "files", project });
-                    return;
-                }
-
-                _events.Broadcast(new { type = "projects" });
-            });
+                        // Resolved here rather than in Classify: it walks the filesystem,
+                        // and a burst of writes would pay for it on every raw event.
+                        var project = FindOwningProject(e.FullPath);
+                        if (project is not null) _events.Broadcast(new { type = kind, project });
+                    });
+            }
 
             watcher.Created += OnChange;
             watcher.Deleted += OnChange;
@@ -478,6 +473,28 @@ public sealed class StudioServer(AssetCatalog assets, ProjectIndex index, int po
         {
             // Without a watcher the UI still works; the rail just needs a manual rescan.
         }
+    }
+
+    /// <summary>
+    /// Works out what a changed path means, without touching the filesystem: which kind of
+    /// event it is, and the project directory it belongs to. The scope is the debounce key,
+    /// so two projects -- and two kinds within one project -- never cancel each other.
+    /// </summary>
+    private static (string Kind, string Scope) Classify(string path)
+    {
+        foreach (var (folder, kind) in new[]
+                 {
+                     ("screenshots", "shots"),
+                     ("suggestions", "suggestions"),
+                     ("src", "files"),
+                 })
+        {
+            var marker = $"{Path.DirectorySeparatorChar}{folder}{Path.DirectorySeparatorChar}";
+            var at = path.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            if (at >= 0) return (kind, path[..at]);
+        }
+
+        return ("projects", "");
     }
 
     private string? FindOwningProject(string path) =>
