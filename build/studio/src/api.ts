@@ -107,6 +107,50 @@ export const api = {
 
   stopChat: (project: string) =>
     fetch(`/api/projects/${encodeURIComponent(project)}/chat/stop`, { method: "POST" }),
+
+  /** Drops the agent's session, so the next turn starts a genuinely new conversation. */
+  resetChat: (project: string) =>
+    fetch(`/api/projects/${encodeURIComponent(project)}/chat/reset`, { method: "POST" }),
+
+  /** Moves a project into <root>/.trash/ -- recoverable, not an unlink. */
+  deleteProject: async (project: string) => {
+    const response = await fetch(`/api/projects/${encodeURIComponent(project)}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) {
+      let detail = `${response.status}`;
+      try {
+        const problem = (await response.json()) as { detail?: string };
+        if (problem.detail) detail = problem.detail;
+      } catch {
+        // Non-JSON body; the status is all we have.
+      }
+      throw new Error(detail);
+    }
+    return (await response.json()) as { trashedTo: string };
+  },
+
+  editorAvailable: () => json<{ available: boolean }>("/api/editor"),
+
+  /** Opens a file (or the whole project, when path is omitted) in VS Code. */
+  openInEditor: async (project: string, path?: string) => {
+    const query = path ? `?path=${encodeURIComponent(path)}` : "";
+    const response = await fetch(
+      `/api/projects/${encodeURIComponent(project)}/open-editor${query}`,
+      { method: "POST" }
+    );
+    if (!response.ok) {
+      // The server sends a ProblemDetails body explaining how to install `code`.
+      let detail = `${response.status}`;
+      try {
+        const problem = (await response.json()) as { detail?: string };
+        if (problem.detail) detail = problem.detail;
+      } catch {
+        // Non-JSON body; the status is all we have.
+      }
+      throw new Error(detail);
+    }
+  },
 };
 
 /** Server-pushed events, one stream for the whole app. */

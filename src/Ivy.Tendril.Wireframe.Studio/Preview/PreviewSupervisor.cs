@@ -90,6 +90,26 @@ public sealed class PreviewSupervisor(AssetCatalog assets) : IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Stops the preview and releases the project's files. Must be called before the
+    /// project directory is moved or deleted: the esbuild watcher holds handles inside it,
+    /// and on Windows that makes the move fail.
+    /// </summary>
+    public async Task CloseAsync(CancellationToken ct = default)
+    {
+        await _gate.WaitAsync(ct);
+        try
+        {
+            await TeardownAsync();
+            _project = null;
+            Publish(PreviewStatus.Idle);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
     /// <summary>Forces a clean rebuild and restart of the current project.</summary>
     public async Task<PreviewStatus> RebuildAsync(CancellationToken ct = default)
     {

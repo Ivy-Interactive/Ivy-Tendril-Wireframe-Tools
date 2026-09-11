@@ -10,9 +10,9 @@ import {
 } from "@codemirror/language";
 import { javascript } from "@codemirror/lang-javascript";
 import { tags } from "@lezer/highlight";
-import { Check, FileCode2, Save } from "lucide-react";
+import { Check, FileCode2, Save, SquareArrowOutUpRight } from "lucide-react";
 import { api, type SourceFile } from "../api";
-import { Button, Empty, cx, formatBytes } from "./ui";
+import { Button, Empty, IconButton, cx, formatBytes } from "./ui";
 
 /** Matches the Studio's own palette rather than importing a stock CodeMirror theme, so the
  *  editor does not look bolted on. */
@@ -56,6 +56,7 @@ export function CodePanel({
   const [active, setActive] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [editorError, setEditorError] = useState<string | null>(null);
 
   const viewRef = useRef<EditorView | null>(null);
   // Bumped when the editor attaches, so the file-loading effect below re-runs once there
@@ -169,6 +170,16 @@ export function CodePanel({
 
   const current = files.find((f) => f.path === active);
 
+  const openInEditor = async () => {
+    if (!project) return;
+    try {
+      // Hand over the open file when there is one, otherwise the whole project.
+      await api.openInEditor(project, active ?? undefined);
+    } catch (error) {
+      setEditorError(error instanceof Error ? error.message : String(error));
+    }
+  };
+
   return (
     <div className="flex h-full min-h-0 flex-col">
       {!project || files.length === 0 ? (
@@ -204,6 +215,12 @@ export function CodePanel({
                   {formatBytes(current.bytes)}
                 </span>
               )}
+              <IconButton
+                icon={<SquareArrowOutUpRight size={13} />}
+                label="Open in VS Code"
+                onClick={() => void openInEditor()}
+                disabled={!project}
+              />
               <Button
                 onClick={save}
                 disabled={!dirty}
@@ -216,6 +233,19 @@ export function CodePanel({
           </div>
           {/* A definite height is required: CodeMirror measures its host, and a flex
               child without min-h-0 collapses to zero here, which renders nothing. */}
+          {editorError && (
+            <div className="flex shrink-0 items-start gap-2 border-b border-edge bg-warn/10 px-3 py-2
+                            text-[11.5px] leading-relaxed text-warn">
+              <span className="flex-1">{editorError}</span>
+              <button
+                type="button"
+                onClick={() => setEditorError(null)}
+                className="shrink-0 text-warn/70 hover:text-warn"
+              >
+                dismiss
+              </button>
+            </div>
+          )}
           <div ref={attachEditor} className="min-h-0 flex-1 overflow-hidden" />
         </>
       )}

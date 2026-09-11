@@ -12,13 +12,6 @@ import {
 import { api, chat, type ChatEntry } from "../api";
 import { Empty, IconButton, Pane, cx } from "./ui";
 
-const SUGGESTIONS = [
-  "Add a top bar with search and an avatar",
-  "Turn the list into a kanban board with three columns",
-  "Make it a mobile layout at 420 wide",
-  "Add a chart showing weekly spend",
-];
-
 let nextId = 0;
 const newId = () => `e${++nextId}`;
 
@@ -50,8 +43,8 @@ export function ChatPanel({ project }: { project: string | null }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Each project gets its own transcript; the backend keeps a separate agent session per
-  // project too, so switching back and forth does not cross wires.
+  // Switching projects clears the visible transcript but deliberately leaves the server
+  // session alone: each project keeps its own, so coming back still has context.
   useEffect(() => {
     abortRef.current?.abort();
     setEntries([]);
@@ -123,6 +116,24 @@ export function ChatPanel({ project }: { project: string | null }) {
     setBusy(false);
   };
 
+  /**
+   * Clearing the transcript on its own is not enough. The backend resumes a per-project
+   * session id on every turn, so the agent would still remember everything that had
+   * scrolled out of view -- which is worse than not offering the button at all.
+   */
+  const startNewConversation = async () => {
+    abortRef.current?.abort();
+    if (project) {
+      try {
+        await api.resetChat(project);
+      } catch (error) {
+        console.error(error);
+      }
+    }
+    setEntries([]);
+    setBusy(false);
+  };
+
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -141,8 +152,8 @@ export function ChatPanel({ project }: { project: string | null }) {
           )}
           <IconButton
             icon={<MessageSquarePlus size={14} />}
-            label="Clear transcript"
-            onClick={() => setEntries([])}
+            label="New conversation (forgets the current context)"
+            onClick={() => void startNewConversation()}
             disabled={busy || entries.length === 0}
           />
         </>
@@ -151,29 +162,11 @@ export function ChatPanel({ project }: { project: string | null }) {
     >
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
         {entries.length === 0 ? (
-          <div className="flex h-full flex-col justify-center gap-3 px-4">
-            <Empty icon={<Bot size={20} />}>
-              {project
-                ? "Describe a change and the agent will edit this wireframe, then screenshot it."
-                : "Pick a wireframe on the left."}
-            </Empty>
-            {project && (
-              <ul className="space-y-1.5">
-                {SUGGESTIONS.map((suggestion) => (
-                  <li key={suggestion}>
-                    <button
-                      type="button"
-                      onClick={() => void send(suggestion)}
-                      className="w-full rounded border border-edge px-2.5 py-1.5 text-left text-[11.5px]
-                                 text-body-muted transition-colors hover:border-edge-bright hover:text-body"
-                    >
-                      {suggestion}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+          <Empty icon={<Bot size={20} />}>
+            {project
+              ? "Describe a change and the agent will edit this wireframe, then screenshot it."
+              : "Pick a wireframe on the left."}
+          </Empty>
         ) : (
           <ul className="space-y-2 p-3">
             {entries.map((entry) => (

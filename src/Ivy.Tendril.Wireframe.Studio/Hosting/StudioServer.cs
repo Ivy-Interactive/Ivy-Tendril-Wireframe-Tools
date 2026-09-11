@@ -224,6 +224,65 @@ public sealed class StudioServer(AssetCatalog assets, ProjectIndex index, int po
             return Results.Ok();
         });
 
+        app.MapPost("/api/projects/{name}/chat/reset", (string name) =>
+        {
+            var project = index.Find(name);
+            if (project is null) return Results.NotFound();
+
+            // Clearing the transcript in the browser is not enough: the next turn would
+            // still pass --resume with the old session id and the agent would remember
+            // everything. Dropping the id here is what actually starts a new conversation.
+            if (_agents.TryGetValue(project.Root, out var session))
+            {
+                session.Kill();
+                session.Reset();
+            }
+            return Results.Ok();
+        });
+
+        app.MapDelete("/api/projects/{name}", async (string name, CancellationToken ct) =>
+        {
+            var project = index.Find(name);
+            if (project is null) return Results.NotFound();
+
+            // Release the project first: the esbuild watcher holds handles inside it, and
+            // on Windows an open handle makes the move fail.
+            if (_preview.CurrentProjectName == project.Name) await _preview.CloseAsync(ct);
+            if (_agents.TryRemove(project.Root, out var session)) session.Kill();
+
+            var result = ProjectTrash.Trash(index, project);
+            if (!result.Ok) return Results.Problem(result.Error, statusCode: 409);
+
+            _events.Broadcast(new { type = "projects" });
+            return Results.Json(new { trashedTo = result.Destination }, Json);
+        });
+
+        // ---- editor ------------------------------------------------------------
+        app.MapGet("/api/editor", () => Results.Json(new { available = EditorLauncher.IsAvailable }, Json));
+
+        app.MapPost("/api/projects/{name}/open-editor", (string name, string? path, int line) =>
+        {
+            var project = index.Find(name);
+            if (project is null) return Results.NotFound();
+
+            // No path means "open the whole project", which is what you want when jumping
+            // out to the editor to work on more than one file.
+            string target;
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                target = project.Root;
+            }
+            else
+            {
+                var resolved = ProjectIndex.ResolveSourcePath(project, path);
+                if (resolved is null) return Results.BadRequest("Path is outside src/.");
+                target = resolved;
+            }
+
+            var result = EditorLauncher.Open(target, line);
+            return result.Ok ? Results.Ok() : Results.Problem(result.Error, statusCode: 409);
+        });
+
         // ---- events ------------------------------------------------------------
         app.MapGet("/api/events", async (HttpContext ctx, CancellationToken ct) =>
         {

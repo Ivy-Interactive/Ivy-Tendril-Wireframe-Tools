@@ -96,6 +96,12 @@ wireframe-studio ./wireframes
   ~10 ms, and the wireframe's own live-reload refreshes the frame. There is deliberately no
   autosave — a half-typed JSX expression would blank the preview on every keystroke.
 - **Screenshots** is the gallery of `screenshots/*.png`, with a lightbox and download.
+- **Delete** is on each row in the rail, behind an inline confirm. It moves the project to
+  `<root>/.trash/<name>-<timestamp>/` rather than unlinking it, so a misclick costs one
+  `mv` to undo. The scanned root itself, and anything that is not a wireframe project,
+  are refused.
+- **Open in VS Code** opens the current file (code pane) or the whole project folder
+  (rail header). Needs the `code` command; set `WIREFRAME_EDITOR` to override.
 - **Agent** runs the Claude CLI in the selected project, streaming its reply and tool calls.
   It is scoped to editing `src/` and running `wireframe screenshot` — not
   `--dangerously-skip-permissions`. Without the `claude` CLI on `PATH` the panel is inert

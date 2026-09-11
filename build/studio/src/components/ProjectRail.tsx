@@ -1,5 +1,14 @@
-import { FolderOpen, Image, Layers, RefreshCw } from "lucide-react";
-import type { ProjectSummary } from "../api";
+import { useState } from "react";
+import {
+  FolderOpen,
+  Image,
+  Layers,
+  RefreshCw,
+  SquareArrowOutUpRight,
+  Trash2,
+  TriangleAlert,
+} from "lucide-react";
+import { api, type ProjectSummary } from "../api";
 import { Empty, IconButton, Pane, cx, formatAgo } from "./ui";
 
 export function ProjectRail({
@@ -15,13 +24,58 @@ export function ProjectRail({
   onRefresh: () => void;
   root: string;
 }) {
+  // Two-step delete: the row turns into a confirm strip rather than firing a
+  // window.confirm(), which is easy to dismiss by reflex.
+  const [confirming, setConfirming] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const remove = async (name: string) => {
+    setBusy(name);
+    setError(null);
+    try {
+      await api.deleteProject(name);
+      setConfirming(null);
+      onRefresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+
   return (
     <Pane
       title="Wireframes"
       subtitle={projects.length ? `${projects.length}` : undefined}
-      actions={<IconButton icon={<RefreshCw size={14} />} label="Rescan" onClick={onRefresh} />}
+      actions={
+        <>
+          <IconButton
+            icon={<SquareArrowOutUpRight size={14} />}
+            label="Open the selected project folder in VS Code"
+            onClick={() => selected && void api.openInEditor(selected).catch(console.error)}
+            disabled={!selected}
+          />
+          <IconButton icon={<RefreshCw size={14} />} label="Rescan" onClick={onRefresh} />
+        </>
+      }
       bodyClassName="overflow-y-auto"
     >
+      {error && (
+        <div className="flex items-start gap-2 border-b border-edge bg-bad/10 px-3 py-2
+                        text-[11.5px] leading-relaxed text-bad">
+          <TriangleAlert size={13} className="mt-0.5 shrink-0" />
+          <span className="flex-1">{error}</span>
+          <button
+            type="button"
+            onClick={() => setError(null)}
+            className="shrink-0 text-bad/70 hover:text-bad"
+          >
+            dismiss
+          </button>
+        </div>
+      )}
+
       {projects.length === 0 ? (
         <Empty icon={<FolderOpen size={20} />}>
           No wireframe projects under <span className="font-mono">{root}</span>. Create one with{" "}
@@ -31,13 +85,55 @@ export function ProjectRail({
         <ul className="py-1">
           {projects.map((project) => {
             const active = project.name === selected;
+            const isConfirming = confirming === project.name;
+            const isBusy = busy === project.name;
+
+            if (isConfirming) {
+              return (
+                <li
+                  key={project.path}
+                  className="border-l-2 border-bad bg-bad/10 px-3 py-2 text-[11.5px]"
+                >
+                  <p className="leading-relaxed text-body">
+                    Delete <span className="font-medium">{project.name}</span>?
+                  </p>
+                  <p className="mt-0.5 leading-relaxed text-body-faint">
+                    {project.fileCount} source {project.fileCount === 1 ? "file" : "files"} and{" "}
+                    {project.screenshotCount}{" "}
+                    {project.screenshotCount === 1 ? "screenshot" : "screenshots"} move to{" "}
+                    <span className="font-mono">.trash/</span>, so you can still get it back.
+                  </p>
+                  <div className="mt-2 flex gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => void remove(project.name)}
+                      disabled={isBusy}
+                      className="rounded bg-bad px-2 py-1 text-[11px] font-medium text-shell
+                                 hover:brightness-110 disabled:opacity-50"
+                    >
+                      {isBusy ? "Deleting…" : "Delete"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirming(null)}
+                      disabled={isBusy}
+                      className="rounded border border-edge px-2 py-1 text-[11px] text-body-muted
+                                 hover:border-edge-bright hover:text-body disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </li>
+              );
+            }
+
             return (
-              <li key={project.path}>
+              <li key={project.path} className="group/row relative">
                 <button
                   type="button"
                   onClick={() => onSelect(project.name)}
                   className={cx(
-                    "group flex w-full flex-col gap-0.5 border-l-2 px-3 py-2 text-left transition-colors",
+                    "flex w-full flex-col gap-0.5 border-l-2 px-3 py-2 pr-9 text-left transition-colors",
                     active
                       ? "border-brand bg-shell-raised"
                       : "border-transparent hover:bg-shell-raised/60"
@@ -46,7 +142,7 @@ export function ProjectRail({
                   <span
                     className={cx(
                       "truncate text-[13px] font-medium",
-                      active ? "text-body" : "text-body-muted group-hover:text-body"
+                      active ? "text-body" : "text-body-muted group-hover/row:text-body"
                     )}
                   >
                     {project.name}
@@ -62,6 +158,23 @@ export function ProjectRail({
                     </span>
                     <span className="ml-auto">{formatAgo(project.modified)}</span>
                   </span>
+                </button>
+
+                {/* Outside the row button so it is not a nested <button>. Hidden until
+                    hover or focus, so a rail of projects is not a wall of trash icons. */}
+                <button
+                  type="button"
+                  title={`Delete ${project.name}`}
+                  aria-label={`Delete ${project.name}`}
+                  onClick={() => {
+                    setError(null);
+                    setConfirming(project.name);
+                  }}
+                  className="absolute top-2 right-2 hidden size-6 items-center justify-center rounded
+                             text-body-faint hover:bg-bad/20 hover:text-bad
+                             group-hover/row:flex focus-visible:flex"
+                >
+                  <Trash2 size={13} />
                 </button>
               </li>
             );
