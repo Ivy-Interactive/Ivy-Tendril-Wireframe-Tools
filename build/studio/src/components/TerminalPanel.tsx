@@ -85,6 +85,39 @@ export function TerminalPanel({
       theme: readTheme(),
     });
 
+    // Ctrl/Cmd+V, and Ctrl+Shift+C to copy.
+    //
+    // Left alone, xterm treats Ctrl+V as an ordinary control key and sends 0x16 to the
+    // PTY, so pasting does nothing at all. Returning false hands the event back to the
+    // browser, whose native paste xterm then turns into input -- which needs no clipboard
+    // permission, unlike reading the clipboard ourselves.
+    //
+    // Copy cannot be Ctrl+C: that is interrupt, and a terminal that cannot interrupt is
+    // worse than one that cannot copy. Ctrl+Shift+C is the usual terminal binding, and
+    // selecting with the mouse still works either way.
+    term.attachCustomKeyEventHandler((event) => {
+      if (event.type !== "keydown") return true;
+
+      const modifier = event.ctrlKey || event.metaKey;
+      if (!modifier) return true;
+
+      const key = event.key.toLowerCase();
+
+      if (key === "v") return false;
+
+      if (key === "c" && event.shiftKey) {
+        const selection = term.getSelection();
+        if (selection) {
+          void navigator.clipboard.writeText(selection).catch(() => {
+            // Denied or unavailable; the browser's own copy still works on a selection.
+          });
+          return false;
+        }
+      }
+
+      return true;
+    });
+
     const fit = new FitAddon();
     term.loadAddon(fit);
     term.loadAddon(new WebLinksAddon());
