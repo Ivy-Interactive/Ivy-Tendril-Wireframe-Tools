@@ -61,73 +61,17 @@ public static class ScaffoldTemplates
 
         """;
 
+    /// <summary>
+    /// Deliberately blank. A starter wireframe here would be the first thing an agent has
+    /// to delete, and the first thing it copies the style of by accident -- so `setup`
+    /// leaves an empty page and the conventions live in `wireframe agent-readme`.
+    /// </summary>
     public const string AppTsx =
         """
-        import {
-          Button,
-          Card,
-          Field,
-          TextInput,
-          SelectInput,
-          Callout,
-          TextBlock,
-          Separator,
-        } from "tendril-wireframes";
-        import { useState } from "react";
-
-        // Props are named enums rather than booleans plus utility classes:
-        //   variant="Destructive"  density="Small"  borderRadius="Full"
-        // Sizes accept CSS lengths ("20rem"), fractions ("1/2") and bare numbers, which
-        // mean quarter-rem steps. Run `wireframe agent-readme` for the full reference.
+        // Build the wireframe here. Components come from "tendril-wireframes"; layout is
+        // plain flexbox and CSS grid. Run `wireframe agent-readme` for the full reference.
         export default function App() {
-          const [name, setName] = useState("");
-          const [plan, setPlan] = useState<string | null>("team");
-
-          return (
-            <div className="mx-auto max-w-4xl p-8">
-              <TextBlock variant="H2">New workspace</TextBlock>
-              <TextBlock variant="Muted">
-                Replace this with your wireframe. Layout is plain flexbox and CSS grid;
-                everything that should look drawn comes from a Tendril component.
-              </TextBlock>
-
-              <Separator />
-
-              <div className="mt-6 grid grid-cols-2 gap-6">
-                <Card title="Details">
-                  <Field label="Workspace name" required>
-                    <TextInput
-                      value={name}
-                      onChange={(v) => setName(v ?? "")}
-                      placeholder="Acme Corp"
-                      width="100%"
-                    />
-                  </Field>
-                  <Field label="Plan">
-                    <SelectInput
-                      value={plan}
-                      onChange={setPlan}
-                      options={[
-                        { value: "solo", label: "Solo" },
-                        { value: "team", label: "Team" },
-                        { value: "enterprise", label: "Enterprise" },
-                      ]}
-                      width="100%"
-                    />
-                  </Field>
-                  <div className="mt-4 flex gap-3">
-                    <Button title="Create" icon="Rocket" />
-                    <Button title="Cancel" variant="Ghost" />
-                  </div>
-                </Card>
-
-                <Callout variant="Info" title="Hot reload is on">
-                  Edit any file under src/ and the browser reloads. Build errors appear both
-                  here and in the terminal.
-                </Callout>
-              </div>
-            </div>
-          );
+          return <div />;
         }
 
         """;
