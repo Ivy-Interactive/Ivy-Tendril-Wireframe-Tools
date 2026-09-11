@@ -69,7 +69,8 @@ public class StudioTests : IDisposable
 
         var summary = new ProjectIndex(_root).List().Single();
 
-        Assert.Equal(3, summary.FileCount);          // App.tsx, main.tsx, wireframe-ready.ts
+        // index.html, App.tsx, main.tsx, wireframe-ready.ts -- the app is all under src/.
+        Assert.Equal(4, summary.FileCount);
         Assert.Equal(2, summary.ScreenshotCount);
     }
 

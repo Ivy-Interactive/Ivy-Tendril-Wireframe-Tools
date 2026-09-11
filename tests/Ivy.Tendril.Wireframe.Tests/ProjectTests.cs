@@ -32,9 +32,17 @@ public class ProjectTests : IDisposable
         Assert.True(File.Exists(project.EntryPoint));
         Assert.True(File.Exists(Path.Combine(project.SourceDir, "App.tsx")));
         Assert.True(File.Exists(Path.Combine(project.SourceDir, "wireframe-ready.ts")));
-        Assert.True(File.Exists(project.IndexHtml));
         Assert.True(File.Exists(project.TsConfig));
         Assert.True(Directory.Exists(project.ScreenshotsDir));
+
+        // The whole app lives under src/, so opening the project shows one folder to work in.
+        Assert.Equal(Path.Combine(project.SourceDir, "index.html"), project.IndexHtml);
+        Assert.True(File.Exists(project.IndexHtml));
+        Assert.False(File.Exists(Path.Combine(project.Root, "index.html")));
+
+        // Throwaway mockups: no git scaffolding and no empty-folder placeholders.
+        Assert.False(File.Exists(Path.Combine(project.Root, ".gitignore")));
+        Assert.Empty(Directory.EnumerateFiles(project.Root, ".gitkeep", SearchOption.AllDirectories));
     }
 
     [Fact]
@@ -99,15 +107,22 @@ public class ProjectTests : IDisposable
     }
 
     [Fact]
-    public void Gitignore_gets_the_workspace_entry_exactly_once()
+    public void An_old_layout_project_is_migrated_into_src()
     {
+        // Projects scaffolded before the app moved under src/ have index.html and public/
+        // at the root. Moving rather than regenerating matters: index.html may be edited.
         var project = Scaffold();
-        var scaffolder = new ProjectScaffolder(AssetCatalog.Default);
-        scaffolder.Scaffold(project);
-        scaffolder.Scaffold(project);
+        File.Delete(project.IndexHtml);
+        File.WriteAllText(project.LegacyIndexHtml, "<!-- hand edited -->");
+        Directory.CreateDirectory(project.LegacyPublicDir);
+        File.WriteAllText(Path.Combine(project.LegacyPublicDir, "logo.svg"), "<svg/>");
 
-        var gitignore = File.ReadAllText(Path.Combine(project.Root, ".gitignore"));
-        Assert.Equal(1, gitignore.Split(".wireframe/").Length - 1);
+        new ProjectScaffolder(AssetCatalog.Default).Scaffold(project);
+
+        Assert.Equal("<!-- hand edited -->", File.ReadAllText(project.IndexHtml));
+        Assert.False(File.Exists(project.LegacyIndexHtml));
+        Assert.True(File.Exists(Path.Combine(project.PublicDir, "logo.svg")));
+        Assert.False(Directory.Exists(project.LegacyPublicDir));
     }
 
     [Fact]

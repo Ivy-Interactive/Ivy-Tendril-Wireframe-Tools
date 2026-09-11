@@ -8,13 +8,19 @@ namespace Ivy.Tendril.Wireframe.Console.Project;
 ///
 /// <code>
 /// &lt;root&gt;/
-///   index.html          committed, editable
-///   tsconfig.json       committed, extends .wireframe/tsconfig.base.json
-///   src/                committed -- the agent's work
-///   public/             committed -- static assets
+///   src/                the entire app, committed -- the agent's work
+///     index.html
+///     main.tsx
+///     App.tsx
+///     public/           static assets
 ///   screenshots/        committed -- the deliverable
+///   tsconfig.json       committed, extends .wireframe/tsconfig.base.json
 ///   .wireframe/         GITIGNORED, regenerated on every run, never user-authored
 /// </code>
+///
+/// Everything the app is made of lives under src/. The root holds only configuration,
+/// generated output and docs, so opening the project in an editor shows one folder to
+/// work in rather than app files scattered beside config.
 ///
 /// Build output deliberately does NOT live under the project: it goes to a per-project
 /// directory under the user's local app data, so there is no stray dist/ to gitignore and
@@ -25,12 +31,21 @@ public sealed class WireframeProject
     public required string Root { get; init; }
 
     public string SourceDir => Path.Combine(Root, "src");
-    public string PublicDir => Path.Combine(Root, "public");
+
+    /// <summary>Static assets. Inside src/ because they are part of the app, not config.</summary>
+    public string PublicDir => Path.Combine(SourceDir, "public");
     public string ScreenshotsDir => Path.Combine(Root, "screenshots");
     public string WorkDir => Path.Combine(Root, ".wireframe");
     public string TypesDir => Path.Combine(WorkDir, "types");
     public string StampFile => Path.Combine(WorkDir, ".stamp");
-    public string IndexHtml => Path.Combine(Root, "index.html");
+    public string IndexHtml => Path.Combine(SourceDir, "index.html");
+
+    /// <summary>Where index.html used to live. Kept only so existing projects can be
+    /// migrated on the next run rather than silently losing their edited markup.</summary>
+    public string LegacyIndexHtml => Path.Combine(Root, "index.html");
+
+    /// <summary>Ditto for public/.</summary>
+    public string LegacyPublicDir => Path.Combine(Root, "public");
     public string TsConfig => Path.Combine(Root, "tsconfig.json");
     public string EntryPoint => Path.Combine(SourceDir, "main.tsx");
 
@@ -67,12 +82,15 @@ public sealed class WireframeProject
         return s.Length == 0 ? "wireframe" : s;
     }
 
-    /// <summary>Files the agent authors, in bundle order relevance. Used by the linter.</summary>
+    /// <summary>Extensions that count as app source: what the editor lists and the class
+    /// linter scans. index.html is included because it lives in src/ and carries markup.</summary>
+    private static readonly string[] SourceExtensions = [".tsx", ".ts", ".html", ".css"];
+
+    /// <summary>Files the agent authors. Used by the linter and by Studio's editor.</summary>
     public IEnumerable<string> SourceFiles() =>
         Directory.Exists(SourceDir)
             ? Directory.EnumerateFiles(SourceDir, "*.*", SearchOption.AllDirectories)
-                .Where(f => f.EndsWith(".tsx", StringComparison.OrdinalIgnoreCase)
-                         || f.EndsWith(".ts", StringComparison.OrdinalIgnoreCase))
+                .Where(f => SourceExtensions.Any(e => f.EndsWith(e, StringComparison.OrdinalIgnoreCase)))
             : [];
 
     public string RelativePath(string absolute) =>

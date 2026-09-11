@@ -27,10 +27,28 @@ and produces a project an agent can edit immediately.
 
 ### `wireframe setup <path>`
 
-Scaffolds `src/App.tsx`, `src/main.tsx`, `index.html`, a `tsconfig.json` and a
-`.wireframe/` workspace holding the TypeScript definitions. Existing files are never
-overwritten. Editors get full IntelliSense with no `node_modules`, because VS Code ships
-its own tsserver and `tsconfig` `paths` point at the vendored `.d.ts` files.
+```
+<path>/
+  src/                 the entire app -- this is the only folder you edit
+    index.html
+    main.tsx
+    App.tsx
+    wireframe-ready.ts
+  screenshots/         the deliverable
+  tsconfig.json
+  .wireframe/          regenerated every run; types for the editor
+```
+
+Everything the app is made of lives under `src/`, so opening the project shows one folder
+to work in rather than app files scattered beside config. Existing files are never
+overwritten, and a project from an earlier layout has its `index.html` and `public/` moved
+into `src/` on the next run rather than regenerated — your edits survive.
+
+Editors get full IntelliSense with no `node_modules`, because VS Code ships its own
+tsserver and `tsconfig` `paths` point at the vendored `.d.ts` files.
+
+No `.gitignore` or `.gitkeep` is written: these are throwaway mockups. If you do commit
+one, add `.wireframe/` to your own ignore file.
 
 ### `wireframe serve <path> [--open]`
 

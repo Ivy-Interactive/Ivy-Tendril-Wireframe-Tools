@@ -1,4 +1,3 @@
-using System.Text;
 using System.Text.Json;
 using Ivy.Tendril.Wireframe.Console.Assets;
 
@@ -17,6 +16,10 @@ public sealed record ScaffoldResult(
 ///     what it skipped rather than overwriting the agent's work.
 ///   * .wireframe/ is always clobbered. It holds nothing user-authored, so regenerating it
 ///     is how a tool upgrade picks up new types and templates.
+///
+/// Nothing git-related is written. These projects are throwaway mockups, so a .gitignore
+/// and .gitkeep placeholders were noise. If you do commit one, add `.wireframe/` to your
+/// own ignore file -- it is a few MB of regenerable type definitions.
 /// </summary>
 public sealed class ProjectScaffolder(AssetCatalog assets)
 {
@@ -27,8 +30,9 @@ public sealed class ProjectScaffolder(AssetCatalog assets)
 
         Directory.CreateDirectory(project.Root);
         Directory.CreateDirectory(project.SourceDir);
-        Directory.CreateDirectory(project.PublicDir);
         Directory.CreateDirectory(project.ScreenshotsDir);
+
+        MigrateAppIntoSource(project);
 
         WriteIfAbsent(project, project.IndexHtml,
             ScaffoldTemplates.IndexHtml.Replace("{{TITLE}}", project.Name), created, skipped);
@@ -38,13 +42,47 @@ public sealed class ProjectScaffolder(AssetCatalog assets)
         WriteIfAbsent(project, Path.Combine(project.SourceDir, "wireframe-ready.ts"),
             ScaffoldTemplates.WireframeReadyTs, created, skipped);
         WriteIfAbsent(project, project.TsConfig, ScaffoldTemplates.TsConfig, created, skipped);
-        WriteIfAbsent(project, Path.Combine(project.PublicDir, ".gitkeep"), "", created, skipped);
-        WriteIfAbsent(project, Path.Combine(project.ScreenshotsDir, ".gitkeep"), "", created, skipped);
 
         var typeFiles = MaterializeWorkspace(project);
-        UpdateGitIgnore(project);
-
         return new ScaffoldResult(created, skipped, typeFiles);
+    }
+
+    /// <summary>
+    /// Moves index.html and public/ into src/ for projects scaffolded before the app lived
+    /// entirely under src/.
+    ///
+    /// Done by moving rather than rewriting: the user may have edited index.html, and
+    /// regenerating it would throw that away. If both locations somehow exist, the one
+    /// already in src/ wins and the stray copy is left alone for the user to delete.
+    /// </summary>
+    private static void MigrateAppIntoSource(WireframeProject project)
+    {
+        try
+        {
+            if (File.Exists(project.LegacyIndexHtml) && !File.Exists(project.IndexHtml))
+                File.Move(project.LegacyIndexHtml, project.IndexHtml);
+
+            if (Directory.Exists(project.LegacyPublicDir))
+            {
+                foreach (var source in Directory.EnumerateFiles(
+                             project.LegacyPublicDir, "*", SearchOption.AllDirectories))
+                {
+                    var relative = Path.GetRelativePath(project.LegacyPublicDir, source);
+                    var destination = Path.Combine(project.PublicDir, relative);
+                    Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+                    if (!File.Exists(destination)) File.Move(source, destination);
+                }
+
+                // Only remove it once it is genuinely empty, so nothing is ever discarded.
+                if (!Directory.EnumerateFileSystemEntries(project.LegacyPublicDir).Any())
+                    Directory.Delete(project.LegacyPublicDir);
+            }
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            // A locked file just means the old copy stays put; the project still works
+            // because the scaffold writes a fresh index.html into src/ if none is there.
+        }
     }
 
     /// <summary>
@@ -127,19 +165,6 @@ public sealed class ProjectScaffolder(AssetCatalog assets)
 
         Add("csstype", ".wireframe/types/csstype");
         return string.Join(",\n", entries);
-    }
-
-    /// <summary>Appends .wireframe/ to .gitignore, creating it if needed, once.</summary>
-    private static void UpdateGitIgnore(WireframeProject project)
-    {
-        var path = Path.Combine(project.Root, ".gitignore");
-        var existing = File.Exists(path) ? File.ReadAllText(path) : "";
-        if (existing.Contains(".wireframe/", StringComparison.Ordinal)) return;
-
-        var sb = new StringBuilder(existing);
-        if (existing.Length > 0 && !existing.EndsWith('\n')) sb.Append('\n');
-        sb.Append(ScaffoldTemplates.GitIgnoreBlock.TrimStart('\n'));
-        File.WriteAllText(path, sb.ToString());
     }
 
     private static void WriteIfAbsent(

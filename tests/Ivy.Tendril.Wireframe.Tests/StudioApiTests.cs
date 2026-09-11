@@ -66,7 +66,7 @@ public class StudioApiTests : IAsyncLifetime
 
         var project = Assert.Single(projects!);
         Assert.Equal("sample", project.GetProperty("name").GetString());
-        Assert.Equal(3, project.GetProperty("fileCount").GetInt32());
+        Assert.Equal(4, project.GetProperty("fileCount").GetInt32());
         Assert.Equal(1, project.GetProperty("screenshotCount").GetInt32());
     }
 
@@ -82,6 +82,10 @@ public class StudioApiTests : IAsyncLifetime
     [Fact]
     public async Task Reads_and_writes_a_source_file()
     {
+        // index.html is editable too, now that it lives in src/.
+        Assert.Contains("<!doctype html", await _http.GetStringAsync(
+            "/api/projects/sample/file?path=src/index.html"), StringComparison.OrdinalIgnoreCase);
+
         var original = await _http.GetStringAsync("/api/projects/sample/file?path=src/App.tsx");
         Assert.Contains("tendril-wireframes", original);
 
