@@ -9,7 +9,7 @@
     "tailwindcss": "4.3.3"
   },
   "fileCount": 129,
-  "totalBytes": 82052503,
+  "totalBytes": 82052655,
   "files": {
     "css/fonts.css": "b3fe6f4c0f64fdae3e367e571b9b00c73ee636ad7de29afb5bb3e35c92f4faf9",
     "css/tendril.css": "c3025459c9587bbcb3f80de8e7fd9b8ae65815f7ff0f64a7286e3b98290a7692",
@@ -32,7 +32,7 @@
     "fonts/BalsamiqSans-RegularItalic-latin.woff2": "6e0a1cf1c3b31aa40da4886b6c9fa8361a77591691d601ba8d50d0a50f92f416",
     "fonts/OFL.txt": "0e82859672e549fd39554e2bfa97b5511e81f4f89394f2e696666d36b5d52144",
     "studio/app.css": "898074db0e6f941d93d0ba677e07d7650dfec95a0800c2c3b3ed1f96149bd74a",
-    "studio/app.js": "826b1531a56c15ebfb5a38730133c4d74b9f7ee9eaf65ec9a9b658e3f979e88f",
+    "studio/app.js": "188a4883975955282c4d2c09f1de33de701fed9282edebab4110410ded880101",
     "tendril.manifest.json": "a476f9281b026c1b6ca51815b2a7bb433f717d395f92a207d3a980d7db448695",
     "types/csstype/index.d.ts": "ac51dd7d31333793807a6abaa5ae168512b6131bd41d9c5b98477fc3b7800f9f",
     "types/csstype/package.json": "c818b74a9bc1556488b7ec2a65399224738f6619228f9a6491c5c02ca91f849e",

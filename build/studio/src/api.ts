@@ -54,6 +54,27 @@ async function json<T>(url: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+/**
+ * Turns a failed response into something readable. ProblemDetails carries a `detail`;
+ * a model-binding failure does not, and surfacing a bare "400" tells the user nothing.
+ */
+async function describeFailure(response: Response): Promise<string> {
+  const body = await response.text().catch(() => "");
+
+  if (body) {
+    try {
+      const parsed = JSON.parse(body) as { detail?: string; title?: string; errors?: unknown };
+      if (parsed.detail) return parsed.detail;
+      if (parsed.errors) return `${parsed.title ?? "Bad request"}: ${JSON.stringify(parsed.errors)}`;
+      if (parsed.title) return parsed.title;
+    } catch {
+      return body.slice(0, 300);
+    }
+  }
+
+  return `${response.status} ${response.statusText}`.trim();
+}
+
 export const api = {
   projects: () => json<ProjectSummary[]>("/api/projects"),
 
@@ -117,16 +138,7 @@ export const api = {
     const response = await fetch(`/api/projects/${encodeURIComponent(project)}`, {
       method: "DELETE",
     });
-    if (!response.ok) {
-      let detail = `${response.status}`;
-      try {
-        const problem = (await response.json()) as { detail?: string };
-        if (problem.detail) detail = problem.detail;
-      } catch {
-        // Non-JSON body; the status is all we have.
-      }
-      throw new Error(detail);
-    }
+    if (!response.ok) throw new Error(await describeFailure(response));
     return (await response.json()) as { trashedTo: string };
   },
 
@@ -139,17 +151,7 @@ export const api = {
       `/api/projects/${encodeURIComponent(project)}/open-editor${query}`,
       { method: "POST" }
     );
-    if (!response.ok) {
-      // The server sends a ProblemDetails body explaining how to install `code`.
-      let detail = `${response.status}`;
-      try {
-        const problem = (await response.json()) as { detail?: string };
-        if (problem.detail) detail = problem.detail;
-      } catch {
-        // Non-JSON body; the status is all we have.
-      }
-      throw new Error(detail);
-    }
+    if (!response.ok) throw new Error(await describeFailure(response));
   },
 };
 

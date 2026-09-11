@@ -260,7 +260,10 @@ public sealed class StudioServer(AssetCatalog assets, ProjectIndex index, int po
         // ---- editor ------------------------------------------------------------
         app.MapGet("/api/editor", () => Results.Json(new { available = EditorLauncher.IsAvailable }, Json));
 
-        app.MapPost("/api/projects/{name}/open-editor", (string name, string? path, int line) =>
+        // `int? line`, not `int`: a non-nullable value type bound from the query string is
+        // treated as REQUIRED, so omitting it fails binding with a bare 400 before the
+        // handler ever runs.
+        app.MapPost("/api/projects/{name}/open-editor", (string name, string? path, int? line) =>
         {
             var project = index.Find(name);
             if (project is null) return Results.NotFound();
@@ -279,7 +282,7 @@ public sealed class StudioServer(AssetCatalog assets, ProjectIndex index, int po
                 target = resolved;
             }
 
-            var result = EditorLauncher.Open(target, line);
+            var result = EditorLauncher.Open(target, line ?? 0);
             return result.Ok ? Results.Ok() : Results.Problem(result.Error, statusCode: 409);
         });
 
