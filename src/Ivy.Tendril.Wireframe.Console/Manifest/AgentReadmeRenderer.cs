@@ -210,15 +210,77 @@ public sealed class AgentReadmeRenderer(ComponentManifest manifest, VendorManife
         sb.AppendLine();
     }
 
+    /// <summary>
+    /// Every named type the prop signatures use.
+    ///
+    /// Enums are one line each and there are dozens of them, so they stay a flat list.
+    /// Objects and aliases get their own block: a prop typed `Sizing` or `Option` is
+    /// meaningless without one, and leaving them out is what let an agent read
+    /// `width: Sizing`, assume pixels, and render a box four times too big.
+    /// </summary>
     private void Enums(StringBuilder sb)
     {
-        sb.AppendLine("## Enum types");
+        sb.AppendLine("## Types");
         sb.AppendLine();
         sb.AppendLine("Referenced by the prop signatures below.");
         sb.AppendLine();
-        foreach (var (name, values) in manifest.Types.OrderBy(t => t.Key, StringComparer.Ordinal))
-            sb.AppendLine($"- `{name}` = {string.Join(" | ", values)}");
+
+        var ordered = manifest.Types.OrderBy(t => t.Key, StringComparer.Ordinal).ToList();
+
+        var enums = ordered.Where(t => t.Value.Kind == "enum" && t.Value.Values is not null).ToList();
+        if (enums.Count > 0)
+        {
+            sb.AppendLine("### Enums");
+            sb.AppendLine();
+            foreach (var (name, info) in enums)
+                sb.AppendLine($"- `{name}` = {string.Join(" | ", info.Values!)}");
+            sb.AppendLine();
+        }
+
+        var shapes = ordered.Where(t => t.Value.Kind is not "enum").ToList();
+        if (shapes.Count == 0) return;
+
+        sb.AppendLine("### Shapes and aliases");
         sb.AppendLine();
+
+        foreach (var (name, info) in shapes)
+        {
+            switch (info.Kind)
+            {
+                case "alias":
+                    // A union written across lines starts with a leading "|" in the source,
+                    // which is idiomatic TypeScript and noise on one line.
+                    sb.AppendLine($"**`{name}`** = {info.Type?.TrimStart('|').TrimStart()}");
+                    break;
+                case "map":
+                    sb.AppendLine($"**`{name}`** = {{ [key: {info.KeyType}]: {info.ValueType} }}");
+                    break;
+                default:
+                    sb.AppendLine($"**`{name}`**");
+                    break;
+            }
+
+            if (info.Description is not null)
+            {
+                sb.AppendLine();
+                sb.AppendLine(Flatten(info.Description));
+            }
+
+            if (info.Properties is { Count: > 0 })
+            {
+                sb.AppendLine();
+                foreach (var property in info.Properties)
+                {
+                    var optional = property.Required ? "" : "?";
+                    var note = property.Description is not null
+                        ? $"  — {Flatten(property.Description)}"
+                        : "";
+                    sb.AppendLine($"  - `{property.Name}{optional}: {property.Type}`{note}");
+                }
+            }
+
+            sb.AppendLine();
+        }
     }
 
     private void Components(StringBuilder sb)

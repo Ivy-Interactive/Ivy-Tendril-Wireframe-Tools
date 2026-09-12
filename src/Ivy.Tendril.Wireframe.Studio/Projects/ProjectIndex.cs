@@ -19,6 +19,8 @@ public sealed record SourceFileInfo(
 public sealed record SuggestionInfo(
     [property: JsonPropertyName("name")] string Name,
     [property: JsonPropertyName("title")] string Title,
+    /// <summary>Absolute, so it can be pasted straight into an editor or an issue.</summary>
+    [property: JsonPropertyName("path")] string Path,
     [property: JsonPropertyName("bytes")] long Bytes,
     [property: JsonPropertyName("modified")] DateTimeOffset Modified);
 
@@ -143,7 +145,7 @@ public sealed class ProjectIndex(string root)
             {
                 var info = new FileInfo(file);
                 return new SuggestionInfo(
-                    info.Name, ReadTitle(file, info.Name), info.Length,
+                    info.Name, ReadTitle(file, info.Name), info.FullName, info.Length,
                     new DateTimeOffset(info.LastWriteTimeUtc, TimeSpan.Zero));
             })
             .OrderByDescending(s => s.Modified)

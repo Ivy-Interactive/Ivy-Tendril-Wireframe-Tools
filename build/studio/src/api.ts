@@ -32,6 +32,8 @@ export interface Suggestion {
   name: string;
   /** The document's <title>, falling back to the filename. */
   title: string;
+  /** Absolute path on disk, for pasting into an editor or an issue. */
+  path: string;
   bytes: number;
   modified: string;
 }

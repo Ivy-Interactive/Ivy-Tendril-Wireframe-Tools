@@ -3,13 +3,13 @@
   "inputs": {
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "tendril-wireframes": "0.1.1",
+    "tendril-wireframes": "0.1.3",
     "lucide-react": "0.475.0",
     "esbuild": "0.28.2",
     "tailwindcss": "4.3.3"
   },
   "fileCount": 129,
-  "totalBytes": 82410537,
+  "totalBytes": 82430242,
   "files": {
     "css/fonts.css": "b3fe6f4c0f64fdae3e367e571b9b00c73ee636ad7de29afb5bb3e35c92f4faf9",
     "css/tendril.css": "e9894d5a47ae5f2e19b1b4437ab1e098f6357fd3a2cd09dcb55281ea1ec2cfb3",
@@ -32,8 +32,8 @@
     "fonts/BalsamiqSans-RegularItalic-latin.woff2": "6e0a1cf1c3b31aa40da4886b6c9fa8361a77591691d601ba8d50d0a50f92f416",
     "fonts/OFL.txt": "0e82859672e549fd39554e2bfa97b5511e81f4f89394f2e696666d36b5d52144",
     "studio/app.css": "4f881ebaeedd693cd04eeaed97c68343030e211a24245f38c9499aa7cf12c9dc",
-    "studio/app.js": "7d30b39f3c8ff19daa35e9f5e7f6ae0f4ce2d3466c6e6e7d1b4f7bccfda4ca0a",
-    "tendril.manifest.json": "06c3315bde733f7d4dbb1e6d2dece53d3221fa8d1847a46247ea2f745537173e",
+    "studio/app.js": "000e6935aebb894a1e5fcada2983455cbd321fb5804164d7d94521fd80c3a3ac",
+    "tendril.manifest.json": "fb11e17e1e67e22e750e2152c3fca3e6b47ca76dfb750a7308e90b4146f2e3ed",
     "types/csstype/index.d.ts": "ac51dd7d31333793807a6abaa5ae168512b6131bd41d9c5b98477fc3b7800f9f",
     "types/csstype/package.json": "c818b74a9bc1556488b7ec2a65399224738f6619228f9a6491c5c02ca91f849e",
     "types/lucide-react/index.d.ts": "baa466ee373210483a1da21a6cc06712d9851d1c70e91a05df6bb1d6b0cbc2b6",
@@ -67,7 +67,7 @@
     "types/react-dom/static.node.d.ts": "0e011176dc8e6c811e68b31037d54394bb912b3b032cd888e92a37c3c42d7cd0",
     "types/react-dom/test-utils/index.d.ts": "3d3208d0f061e4836dd5f144425781c172987c430f7eaee483fadaa3c5780f9f",
     "types/tendril-wireframes/index.d.ts": "d60f0b9b1b9faa25a711f6c30abb409954d49c5c6147a3738d11f91341e37a7e",
-    "types/tendril-wireframes/lib/types.d.ts": "927a9add3cfab4347d37c8ad20d9e1fe621773f80017d951a39dbb2b2aed92ef",
+    "types/tendril-wireframes/lib/types.d.ts": "04df14b7f20a4353771f023012c2a7ecd7fb9a4205d56c50f1710bef0c1ae27a",
     "types/tendril-wireframes/lib/utils.d.ts": "0ff1c4060a665218c3d0878df1c777100da425a22a294430a223cdb2bf4f21c4",
     "types/tendril-wireframes/sketch/colors.d.ts": "b4df49d33a154a40e93b7d96b20a7390c56a36994da12ace4239445818fa43e7",
     "types/tendril-wireframes/sketch/hand.d.ts": "b94ddb06b25736eff02523f30bd43c650ed2819a0caf54940c8e541d1249010b",
@@ -139,6 +139,6 @@
     "vendor/react-dom.js": "6d97f6b781205e4cefe7baa80cff9fdfd202787ff1d4ba59dbe181a3a1215511",
     "vendor/react.js": "b9c89c4371837868381447ae4f4aafb8ed7c9834117898aa0ce29c5a20741f7a",
     "vendor/tendril-wireframes.js": "30bcd78bffebbc6f756b5d3889d809721541182293e8cae756bfe05b27f845d0",
-    "vendor.manifest.json": "068f8b8946b493812999d229bd6a592a5fa5486925ec72697e2a69fba0dfb7fb"
+    "vendor.manifest.json": "0a16f40e2443b1ced760c67da7b5c0890f79cd7c81059f2fadb9a966596a3b7f"
   }
 }

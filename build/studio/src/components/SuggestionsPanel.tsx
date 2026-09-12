@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Check, Copy, Download, Lightbulb, Maximize2, Trash2 } from "lucide-react";
+import { Check, Copy, Download, Lightbulb, Link2, Maximize2, Trash2 } from "lucide-react";
 import { api, type Suggestion } from "../api";
 import { Empty, IconButton, cx, formatAgo } from "./ui";
 
@@ -26,7 +26,8 @@ export function SuggestionsPanel({
 }) {
   const [openName, setOpenName] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  // Which of the two copy buttons last fired, so only that one shows the tick.
+  const [copied, setCopied] = useState<"source" | "path" | null>(null);
 
   // Selecting the newest by default means the tab is useful the moment it lights up.
   useEffect(() => {
@@ -37,17 +38,25 @@ export function SuggestionsPanel({
 
   const open = suggestions.find((s) => s.name === openName) ?? null;
 
-  useEffect(() => setCopied(false), [openName]);
+  useEffect(() => setCopied(null), [openName]);
 
-  // Copies the page's source, not its rendered text: the useful thing to paste into an
-  // issue is the document itself.
-  const copy = async () => {
+  const copyText = async (what: "source" | "path", text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(what);
+      setTimeout(() => setCopied(null), 1500);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  // The page's source, not its rendered text: the useful thing to paste into an issue is
+  // the document itself.
+  const copySource = async () => {
     if (!project || !open) return;
     try {
       const response = await fetch(api.suggestionUrl(project, open.name, suggestionsVersion));
-      await navigator.clipboard.writeText(await response.text());
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
+      await copyText("source", await response.text());
     } catch (error) {
       console.error(error);
     }
@@ -134,7 +143,9 @@ export function SuggestionsPanel({
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         {open && (
           <div className="flex h-8 shrink-0 items-center gap-2 border-b border-edge px-2.5">
-            <span className="truncate font-mono text-[11px] text-body-faint">{open.name}</span>
+            <span className="truncate font-mono text-[11px] text-body-faint" title={open.path}>
+              {open.path}
+            </span>
             <a
               href={api.suggestionUrl(project, open.name, suggestionsVersion)}
               target="_blank"
@@ -146,9 +157,18 @@ export function SuggestionsPanel({
               <Maximize2 size={13} />
             </a>
             <IconButton
-              icon={copied ? <Check size={13} className="text-good" /> : <Copy size={13} />}
-              label={copied ? "Copied" : "Copy the page source to the clipboard"}
-              onClick={() => void copy()}
+              icon={
+                copied === "path" ? <Check size={13} className="text-good" /> : <Link2 size={13} />
+              }
+              label={copied === "path" ? "Copied" : `Copy the file path — ${open.path}`}
+              onClick={() => void copyText("path", open.path)}
+            />
+            <IconButton
+              icon={
+                copied === "source" ? <Check size={13} className="text-good" /> : <Copy size={13} />
+              }
+              label={copied === "source" ? "Copied" : "Copy the page source to the clipboard"}
+              onClick={() => void copySource()}
             />
             <a
               href={api.suggestionUrl(project, open.name, suggestionsVersion)}

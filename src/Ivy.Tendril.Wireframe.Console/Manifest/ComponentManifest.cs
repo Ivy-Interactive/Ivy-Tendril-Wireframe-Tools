@@ -10,6 +10,36 @@ namespace Ivy.Tendril.Wireframe.Console.Manifest;
 /// types. Because it comes from the compiler rather than hand-written docs, the props here
 /// cannot drift from the components.
 /// </summary>
+/// <summary>One entry in the manifest's type dictionary.</summary>
+public sealed class TypeInfo
+{
+    /// <summary>"enum", "object", "map" or "alias" — which of the fields below apply.</summary>
+    [JsonPropertyName("kind")] public string Kind { get; init; } = "";
+
+    [JsonPropertyName("description")] public string? Description { get; init; }
+
+    /// <summary>enum: the members, in the order they were declared.</summary>
+    [JsonPropertyName("values")] public List<FlexibleString>? Values { get; init; }
+
+    /// <summary>object: the properties.</summary>
+    [JsonPropertyName("properties")] public List<TypeProperty>? Properties { get; init; }
+
+    /// <summary>map: an index signature, e.g. { [key: string]: string | number }.</summary>
+    [JsonPropertyName("keyType")] public string? KeyType { get; init; }
+    [JsonPropertyName("valueType")] public string? ValueType { get; init; }
+
+    /// <summary>alias: what it expands to, e.g. "number | string".</summary>
+    [JsonPropertyName("type")] public string? Type { get; init; }
+}
+
+public sealed class TypeProperty
+{
+    [JsonPropertyName("name")] public string Name { get; init; } = "";
+    [JsonPropertyName("type")] public string Type { get; init; } = "";
+    [JsonPropertyName("required")] public bool Required { get; init; }
+    [JsonPropertyName("description")] public string? Description { get; init; }
+}
+
 public sealed class ComponentManifest
 {
     [JsonPropertyName("name")] public string Name { get; init; } = "";
@@ -17,9 +47,16 @@ public sealed class ComponentManifest
     [JsonPropertyName("componentCount")] public int ComponentCount { get; init; }
     [JsonPropertyName("categories")] public Dictionary<string, int> Categories { get; init; } = new();
 
-    /// <summary>Named string-literal unions, listed once and referenced by props.</summary>
+    /// <summary>
+    /// Every named type the props refer to, described once: enums by their members, objects
+    /// by their properties, aliases by what they expand to.
+    ///
+    /// This used to be unions alone, which meant a prop typed `Sizing` or `Option` named
+    /// something the reference never defined -- and an agent that guessed `width={150}`
+    /// meant pixels got a 600px box, silently.
+    /// </summary>
     [JsonPropertyName("types")]
-    public Dictionary<string, List<FlexibleString>> Types { get; init; } = new();
+    public Dictionary<string, TypeInfo> Types { get; init; } = new();
 
     [JsonPropertyName("components")] public List<ComponentInfo> Components { get; init; } = [];
 

@@ -113,6 +113,23 @@ public class SuggestionsTests : IAsyncLifetime
             await page.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
     }
 
+    /// <summary>The path is what gets pasted into an editor or an issue, so it has to be
+    /// absolute and has to point at the file that is actually there.</summary>
+    [Fact]
+    public async Task Each_suggestion_carries_its_absolute_path()
+    {
+        var written = Write("timeline.html", "<title>Needs a Timeline</title>");
+
+        var listed = Assert.Single(ProjectIndex.Suggestions(_project));
+        Assert.Equal(written, listed.Path);
+        Assert.True(Path.IsPathFullyQualified(listed.Path));
+        Assert.True(File.Exists(listed.Path));
+
+        var api = await _http.GetFromJsonAsync<List<JsonElement>>(
+            "/api/projects/sample/suggestions", TestContext.Current.CancellationToken);
+        Assert.Equal(written, api!.Single().GetProperty("path").GetString());
+    }
+
     [Fact]
     public async Task The_project_summary_counts_them()
     {
