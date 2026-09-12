@@ -174,6 +174,24 @@ public sealed class AgentReadmeRenderer(ComponentManifest manifest, VendorManife
                       "`warning`, `destructive`, `info`. Prefer these over raw Tailwind palette colours so the " +
                       "wireframe stays monochrome.");
         sb.AppendLine();
+        // The vocabulary for colour *props* used to be nowhere in this document, while the
+        // utility vocabulary was right above — so a prop called `background` looked as though
+        // it took `bg-paper-sunken`, and an unresolvable value painted solid black.
+        sb.AppendLine("### Colour values");
+        sb.AppendLine();
+        sb.AppendLine("Props that take a colour — `color`, `background`, `foreground`, `stroke`, `fill`, " +
+                      "`borderColor` — accept any of three things:");
+        sb.AppendLine();
+        sb.AppendLine("```tsx");
+        sb.AppendLine("<Box background=\"paper-sunken\" />   // a theme token, as listed above");
+        sb.AppendLine("<Badge color=\"Destructive\" />        // an Ivy palette name, PascalCase");
+        sb.AppendLine("<Box background=\"#efe9dd\" />         // any CSS colour");
+        sb.AppendLine("```");
+        sb.AppendLine();
+        sb.AppendLine("Note the `bg-` prefix belongs to the *class* form only: `background=\"bg-paper-sunken\"` " +
+                      "is not a colour. An unrecognised value falls back to the default and warns in the " +
+                      "browser console rather than rendering.");
+        sb.AppendLine();
     }
 
     private void SharedProps(StringBuilder sb)
@@ -248,10 +266,28 @@ public sealed class AgentReadmeRenderer(ComponentManifest manifest, VendorManife
             switch (info.Kind)
             {
                 case "alias":
+                {
                     // A union written across lines starts with a leading "|" in the source,
                     // which is idiomatic TypeScript and noise on one line.
-                    sb.AppendLine($"**`{name}`** = {info.Type?.TrimStart('|').TrimStart()}");
+                    var expansion = info.Type?.TrimStart('|').TrimStart() ?? "";
+                    var members = SplitUnion(expansion);
+
+                    // A union of object shapes on one line is technically documented and
+                    // practically unreadable: `SketchShape` came out as a single 600-character
+                    // run, and an agent gave up on `RoughShape` rather than parse it. One
+                    // member per line is the same information, legibly.
+                    if (members.Count > 2 && expansion.Length > 90)
+                    {
+                        sb.AppendLine($"**`{name}`** is one of:");
+                        sb.AppendLine();
+                        foreach (var member in members) sb.AppendLine($"  - `{member}`");
+                    }
+                    else
+                    {
+                        sb.AppendLine($"**`{name}`** = {expansion}");
+                    }
                     break;
+                }
                 case "map":
                     sb.AppendLine($"**`{name}`** = {{ [key: {info.KeyType}]: {info.ValueType} }}");
                     break;
@@ -281,6 +317,35 @@ public sealed class AgentReadmeRenderer(ComponentManifest manifest, VendorManife
 
             sb.AppendLine();
         }
+    }
+
+    /// <summary>
+    /// Splits a union into its members, ignoring the `|` that appear *inside* a member.
+    ///
+    /// `{ a: string | number } | { b: number }` is two members, not three. Splitting on the
+    /// bare separator would cut the first shape in half and produce something that looks
+    /// like valid syntax but is not, which is worse than not splitting at all.
+    /// </summary>
+    private static List<string> SplitUnion(string expansion)
+    {
+        var members = new List<string>();
+        var depth = 0;
+        var start = 0;
+
+        for (var i = 0; i < expansion.Length; i++)
+        {
+            var c = expansion[i];
+            if (c is '{' or '(' or '[' or '<') depth++;
+            else if (c is '}' or ')' or ']' or '>') depth--;
+            else if (c == '|' && depth == 0)
+            {
+                members.Add(expansion[start..i].Trim());
+                start = i + 1;
+            }
+        }
+
+        members.Add(expansion[start..].Trim());
+        return members.Where(m => m.Length > 0).ToList();
     }
 
     private void Components(StringBuilder sb)

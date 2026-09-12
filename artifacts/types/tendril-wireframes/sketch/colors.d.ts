@@ -11,7 +11,10 @@ export declare const PAPER = "#fdfcf7";
 export declare const PAPER_RAISED = "#ffffff";
 export declare const PAPER_SUNKEN = "#f2f0e9";
 export declare const HIGHLIGHT = "#fff6c8";
-/** Accepts an Ivy color name, a raw CSS color, or nothing. */
+/**
+ * Accepts an Ivy colour name (`"Destructive"`), a theme token (`"paper-sunken"`), or any CSS
+ * colour. Anything else returns the fallback rather than painting black, and says so once.
+ */
 export declare function resolveColor(color?: string | null, fallback?: string): string;
 /** Deterministic series colors for charts, in wireframe pencil tones. */
 export declare const CHART_DEFAULT: string[];

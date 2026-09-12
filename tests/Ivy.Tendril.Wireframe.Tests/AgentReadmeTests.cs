@@ -138,4 +138,50 @@ public class AgentReadmeTests
         Assert.Contains("4px", text);
         Assert.Contains("`left?: Sizing`", text);
     }
+
+    /// <summary>
+    /// `SketchShape` is nine object shapes. On one line it was 600 characters of unbroken
+    /// text — technically documented, and an agent gave up on `RoughShape` rather than read
+    /// it. A long union is listed one member per line.
+    /// </summary>
+    [Fact]
+    public void A_long_union_is_listed_rather_than_run_together()
+    {
+        var text = Renderer().Render();
+
+        Assert.Contains("**`SketchShape`** is one of:", text);
+        Assert.Contains("- `{ kind: \"circle\"; cx: number; cy: number; diameter: number }`", text);
+
+        // A member containing its own `|` must not be cut in half.
+        Assert.DoesNotContain("- `{ kind: \"rectangle\"; x?: number", text.Replace(
+            "- `{ kind: \"rectangle\"; x?: number; y?: number; width: number; height: number }`", ""));
+    }
+
+    /// <summary>
+    /// A short union stays on one line -- `number | string` as a bullet list would be worse
+    /// than the problem it solves.
+    /// </summary>
+    [Fact]
+    public void A_short_union_stays_inline()
+    {
+        var text = Renderer().Render();
+
+        Assert.Contains("**`Sizing`** = number | string", text);
+        Assert.DoesNotContain("**`Sizing`** is one of:", text);
+    }
+
+    /// <summary>
+    /// The vocabulary for colour props was nowhere in this document, while the Tailwind
+    /// utility vocabulary was — so a prop called `background` looked as though it took
+    /// `bg-paper-sunken`, and an unresolvable value painted solid black.
+    /// </summary>
+    [Fact]
+    public void The_reference_says_what_a_colour_prop_accepts()
+    {
+        var text = Renderer().Render();
+
+        Assert.Contains("### Colour values", text);
+        Assert.Contains("paper-sunken", text);
+        Assert.Contains("is not a colour", text);
+    }
 }

@@ -13,7 +13,16 @@ export interface RoughPath {
      */
     strokeLineDash?: number[];
 }
-/** Shapes the sketch layer knows how to draw behind or around content. */
+/**
+ * The geometry `RoughShape` and `SketchFrame` can draw. `kind` picks the shape and decides
+ * which of the other fields apply.
+ *
+ * All coordinates are in the parent SVG's user units, origin top-left. The library draws in
+ * pixel space rather than a scaled `viewBox`, so one unit is one CSS pixel.
+ *
+ * `linearPath` is an open run of points, `polygon` closes it, `curve` smooths through it,
+ * and `path` takes any SVG `d` string for anything the named kinds cannot express.
+ */
 export type SketchShape = {
     kind: "rectangle";
     x?: number;
