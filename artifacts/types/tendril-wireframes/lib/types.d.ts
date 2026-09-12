@@ -84,6 +84,11 @@ export interface InternalLink {
 export interface WidgetBaseProps {
     id?: string;
     width?: Sizing;
+    /**
+     * Fixes the height instead of letting the widget size to its content. A widget that
+     * would otherwise grow — `WireframeMockup` is the clearest case — will clip once this is
+     * set, so leave it off unless the height itself is the point.
+     */
     height?: Sizing;
     aspectRatio?: number;
     /**

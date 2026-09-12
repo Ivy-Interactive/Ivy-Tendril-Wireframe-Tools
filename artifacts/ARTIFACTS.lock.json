@@ -3,16 +3,16 @@
   "inputs": {
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "tendril-wireframes": "0.1.8",
+    "tendril-wireframes": "0.1.9",
     "lucide-react": "0.475.0",
     "esbuild": "0.28.2",
     "tailwindcss": "4.3.3"
   },
   "fileCount": 137,
-  "totalBytes": 82467060,
+  "totalBytes": 82500818,
   "files": {
     "css/fonts.css": "b3fe6f4c0f64fdae3e367e571b9b00c73ee636ad7de29afb5bb3e35c92f4faf9",
-    "css/tendril.css": "3b77bc5a1a0e022b44144c02206d89bd2799c280f56e1c41107cb87f93df282b",
+    "css/tendril.css": "273c063af644430c4bdce7078a16d95f24f8a107c7e618d35ce0c8f1867fc38b",
     "css/theme.css": "c128cd3ebb7a5d1429bbe356d452c6e3106381c7e03a475d6fcdae8610078208",
     "css/wireframe-utilities.css": "8361f07b3189a7ee67f0afdba0a13019c511968fe79000b486439b0f1080c4cb",
     "esbuild/linux-arm64/esbuild": "90bd269553d258e80b19e3ccab4f98f0831f87442a2f056510ce24fd1b425fc2",
@@ -33,7 +33,7 @@
     "fonts/OFL.txt": "0e82859672e549fd39554e2bfa97b5511e81f4f89394f2e696666d36b5d52144",
     "studio/app.css": "4f881ebaeedd693cd04eeaed97c68343030e211a24245f38c9499aa7cf12c9dc",
     "studio/app.js": "000e6935aebb894a1e5fcada2983455cbd321fb5804164d7d94521fd80c3a3ac",
-    "tendril.manifest.json": "720c484122e46614dd9172cf6944e78f288acf28183b8abbb611eb74aa151eb7",
+    "tendril.manifest.json": "5b9f2564e15275cff3fa3234728bb71cabea2cc8e0c83a98f1ca42c9355c7037",
     "types/csstype/index.d.ts": "ac51dd7d31333793807a6abaa5ae168512b6131bd41d9c5b98477fc3b7800f9f",
     "types/csstype/package.json": "c818b74a9bc1556488b7ec2a65399224738f6619228f9a6491c5c02ca91f849e",
     "types/lucide-react/index.d.ts": "baa466ee373210483a1da21a6cc06712d9851d1c70e91a05df6bb1d6b0cbc2b6",
@@ -67,7 +67,7 @@
     "types/react-dom/static.node.d.ts": "0e011176dc8e6c811e68b31037d54394bb912b3b032cd888e92a37c3c42d7cd0",
     "types/react-dom/test-utils/index.d.ts": "3d3208d0f061e4836dd5f144425781c172987c430f7eaee483fadaa3c5780f9f",
     "types/tendril-wireframes/index.d.ts": "d60f0b9b1b9faa25a711f6c30abb409954d49c5c6147a3738d11f91341e37a7e",
-    "types/tendril-wireframes/lib/types.d.ts": "04df14b7f20a4353771f023012c2a7ecd7fb9a4205d56c50f1710bef0c1ae27a",
+    "types/tendril-wireframes/lib/types.d.ts": "e81b87f533ecb547f5d014c4f6a74be878151304ac53a678d5bbad7ba759f271",
     "types/tendril-wireframes/lib/utils.d.ts": "0ff1c4060a665218c3d0878df1c777100da425a22a294430a223cdb2bf4f21c4",
     "types/tendril-wireframes/sketch/colors.d.ts": "b4df49d33a154a40e93b7d96b20a7390c56a36994da12ace4239445818fa43e7",
     "types/tendril-wireframes/sketch/hand.d.ts": "aaf1e149f436b9a2dc0f7e61a1c22bee769a28092b7f01072457fccc049fd6ac",
@@ -134,7 +134,7 @@
     "types/tendril-wireframes/widgets/wireframe/CurlyBrace.d.ts": "d7de98a5acdab815be071638935a9932a8930c703346940709b995cfd74ab7b9",
     "types/tendril-wireframes/widgets/wireframe/index.d.ts": "68c6393a028e663ee28baab80c4e9603614cf700c72c2a3c66aeb73ae2973294",
     "types/tendril-wireframes/widgets/wireframe/Marks.d.ts": "b67c1a02dba5dec4706c70936dd3043fa6cb1fbbd7852cf306fce60adf8494bc",
-    "types/tendril-wireframes/widgets/wireframe/Mockup.d.ts": "bee6bc579a4e0a7fbe6b7ae791461d31c690d7df84d51e310fb0064abfc19a1d",
+    "types/tendril-wireframes/widgets/wireframe/Mockup.d.ts": "7ab54996f3c20a0964d2ea751e41c05c66b9d35ee6fb4a57cb13bea50c3124fc",
     "types/tendril-wireframes/widgets/wireframe/Transform.d.ts": "26946a811fdf44786dc0713909307513e347caf37a4d18a874de9a82acc81766",
     "vendor/chunk-QKTFYYMQ.js": "e4fd63be7f75c99f86a2231ea46cf32aa9ef43ae3328e260f98c2819f656e06b",
     "vendor/chunk-TIHVORCE.js": "fd48e5f574fe19d4beb03d2027f015c5e380f71d55283b62515f8793c7e97135",
@@ -146,7 +146,7 @@
     "vendor/react-dom__client.js": "c91ab7efe9342f45081336c602f07c76deacf35191465be574b611d3c893c5c2",
     "vendor/react-dom.js": "6d97f6b781205e4cefe7baa80cff9fdfd202787ff1d4ba59dbe181a3a1215511",
     "vendor/react.js": "b9c89c4371837868381447ae4f4aafb8ed7c9834117898aa0ce29c5a20741f7a",
-    "vendor/tendril-wireframes.js": "5c4cbb2ee58dc857768d12a82f7070bbf88431fe1ffc01af7a247a040df7780c",
-    "vendor.manifest.json": "809378ba1e341157f9a40cf49600e1b806d830455ea90b36eff651250671b745"
+    "vendor/tendril-wireframes.js": "376d7a87746058bdc6fc9b2ef0352e6bbdce27e08c5b5af81293d04561059bd3",
+    "vendor.manifest.json": "1ab70d29f49cd75bc19f6b7a6c72e9498ec284c0547c43bc9ed3a95d3616aae2"
   }
 }

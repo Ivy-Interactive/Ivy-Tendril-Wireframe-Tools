@@ -10,7 +10,7 @@
   "dependencies": {
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "tendril-wireframes": "^0.1.8"
+    "tendril-wireframes": "^0.1.9"
   },
   "devDependencies": {
     "@tailwindcss/cli": "^4.3.3",

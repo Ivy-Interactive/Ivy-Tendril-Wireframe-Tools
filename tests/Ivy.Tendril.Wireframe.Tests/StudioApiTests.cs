@@ -24,9 +24,20 @@ public class StudioApiTests : IAsyncLifetime
 
     private StudioServer _server = null!;
     private HttpClient _http = null!;
+    private string? _editorBefore;
 
     public async ValueTask InitializeAsync()
     {
+        // Point the editor at something inert for the duration.
+        //
+        // `open-editor` really launches an editor -- that is its whole job -- so testing it
+        // against a machine with VS Code installed opened a real window, every run, full of
+        // App.tsx files from temp directories that no longer exist. A test must not leave
+        // windows on the developer's screen, and `WIREFRAME_EDITOR` is the supported way to
+        // say which executable to use.
+        _editorBefore = Environment.GetEnvironmentVariable("WIREFRAME_EDITOR");
+        Environment.SetEnvironmentVariable("WIREFRAME_EDITOR", InertExecutable());
+
         var project = WireframeProject.At(Path.Combine(_root, "sample"));
         new ProjectScaffolder(AssetCatalog.Default).Scaffold(project);
         File.WriteAllBytes(Path.Combine(project.ScreenshotsDir, "1440x900.png"), [0x89, 0x50, 0x4E, 0x47]);
@@ -38,9 +49,24 @@ public class StudioApiTests : IAsyncLifetime
 
     public async ValueTask DisposeAsync()
     {
+        Environment.SetEnvironmentVariable("WIREFRAME_EDITOR", _editorBefore);
         _http?.Dispose();
         if (_server is not null) await _server.DisposeAsync();
         TempRoot.Remove(_root);
+    }
+
+    /// <summary>
+    /// Something that exists, starts, and does nothing visible. `EditorLauncher` runs it with
+    /// no window, so a tool that exits immediately leaves no trace.
+    /// </summary>
+    private static string InertExecutable()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.System), "where.exe");
+        }
+        return File.Exists("/usr/bin/true") ? "/usr/bin/true" : "/bin/true";
     }
 
     [Fact]
