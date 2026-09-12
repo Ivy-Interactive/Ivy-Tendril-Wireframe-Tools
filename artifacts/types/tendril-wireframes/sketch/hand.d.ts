@@ -12,3 +12,12 @@ export declare function roundedRectPath(x: number, y: number, w: number, h: numb
  * rough.js then draws with its own wobble.
  */
 export declare function bendPoints(from: Pt, to: Pt, bend: number, steps?: number): Pt[];
+/**
+ * The two barbs of an arrowhead at `tip`, angled back along the direction the shaft came
+ * in on.
+ *
+ * Aim `from` at the *previous point on the run* rather than the far endpoint: on a bent or
+ * elbowed line the two differ, and aiming at the far end puts the head on at the wrong
+ * angle exactly when the line is most obviously curved.
+ */
+export declare function barbsAt(tip: Pt, from: Pt, size: number, rnd: () => number): Array<[Pt, Pt]>;

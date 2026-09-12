@@ -1,6 +1,7 @@
 export * from './primitives';
 export * from './inputs';
 export * from './charts';
+export * from './diagram';
 export * from './layouts';
 export * from './wireframe';
 export * from './Badge';
