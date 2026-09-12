@@ -29,3 +29,9 @@ build/proof/.url.txt
 
 # Studio UI build scratch.
 build/studio/.out/
+
+# Memtrace's local code-index store, created when its MCP server attaches to this
+# workspace. 70 MB of database rebuilt from the source tree on demand -- local state,
+# not a project artefact.
+.memdb/
+.memtrace/
