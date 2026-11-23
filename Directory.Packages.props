@@ -6,18 +6,18 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageVersion Include="Spectre.Console" Version="0.55.0" />
-    <PackageVersion Include="Spectre.Console.Cli" Version="0.55.0" />
+    <PackageVersion Include="Spectre.Console" Version="0.57.2" />
+    <PackageVersion Include="Spectre.Console.Cli" Version="0.57.2" />
     <!-- Pseudo-terminal for the Studio's agent panel: Microsoft's ConPTY binding on
          Windows, native shims elsewhere. Same library the Ivy framework uses. -->
-    <PackageVersion Include="Porta.Pty" Version="2.2.2" />
+    <PackageVersion Include="Porta.Pty" Version="2.2.4" />
   </ItemGroup>
 
   <!-- Tests -->
   <ItemGroup>
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.7.0" />
-    <PackageVersion Include="xunit.v3" Version="3.2.2" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
+    <PackageVersion Include="xunit.v3" Version="4.0.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
   </ItemGroup>
 
 </Project>
